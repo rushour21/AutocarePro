@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-admin-page text-admin-ink antialiased;
+}
+
+/* Thin fuel/progress slider used in the create-job forms */
+input[type='range'].fuel {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 9999px;
+  background: linear-gradient(to right, var(--fill) 0 var(--pct), #e5e7eb var(--pct) 100%);
+}
+input[type='range'].fuel::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #fff;
+  border: 3px solid var(--fill);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+input[type='range'].fuel::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: #fff;
+  border: 3px solid var(--fill);
+  cursor: pointer;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
+@keyframes marker-pop {
+  0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
+  70% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+.marker-pop {
+  animation: marker-pop 0.35s ease-out both;
+}
+
+@keyframes auto-rotate {
+  0% { transform: perspective(1400px) rotateY(-7deg); }
+  50% { transform: perspective(1400px) rotateY(7deg); }
+  100% { transform: perspective(1400px) rotateY(-7deg); }
+}
+.auto-rotate {
+  animation: auto-rotate 9s ease-in-out infinite;
+}
