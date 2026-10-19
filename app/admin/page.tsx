@@ -1,104 +1,117 @@
-import Link from 'next/link';
-import { CalendarDays, ChevronDown, ChevronRight, ClipboardList, AlarmClock, FileCheck2, BadgeIndianRupee } from 'lucide-react';
-import { Card, Pill } from '@/components/ui';
-import { ASSET, bays, dashboardStats, todaysJobs } from '@/lib/data';
+'use client';
 
-const statIcon = {
-  jobs: { Icon: ClipboardList, bg: 'bg-[#e8effd]', fg: 'text-[#2f6fed]' },
-  clock: { Icon: AlarmClock, bg: 'bg-[#fdeae7]', fg: 'text-[#e5484d]' },
-  ready: { Icon: FileCheck2, bg: 'bg-[#e3f4ea]', fg: 'text-[#1f9d63]' },
-  revenue: { Icon: BadgeIndianRupee, bg: 'bg-[#e3f4ea]', fg: 'text-[#1f9d63]' },
-} as const;
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { AlertTriangle, ChevronRight, CircleDollarSign, Clock3, ClipboardList, Cloud, Flame } from 'lucide-react';
+import { TopBar } from '@/components/layout/AppShell';
+import { WorkshopLiveView } from '@/components/features/WorkshopLiveView';
+import { Card, StatCard, StatusBadge, VehicleImage } from '@/components/ui';
+import { estimateTotals, inr, isActive, isLow, vehicleName, vehicleOf } from '@/lib/format';
+import { useSession } from '@/lib/auth';
+import { useDb } from '@/lib/store';
 
 export default function AdminDashboard() {
-  return (
-    <div className="px-8 py-7">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-[26px] font-bold tracking-tight">Good morning, Rajesh 👋</h1>
-          <p className="mt-1 text-sm text-gray-500">Here&apos;s what&apos;s happening in your garage today.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="flex h-10 items-center gap-2 rounded-lg border border-admin-line bg-white px-4 text-sm text-gray-600 shadow-card">
-            <CalendarDays className="h-4 w-4" />
-            Today, 15 Dec 2024
-          </button>
-          <button className="flex h-10 min-w-[160px] items-center justify-between gap-6 rounded-lg border border-admin-line bg-white px-4 text-sm text-gray-600 shadow-card">
-            All Branches
-            <ChevronDown className="h-4 w-4" />
-          </button>
-        </div>
-      </header>
+  const db = useDb();
+  const { user } = useSession();
+  const router = useRouter();
+  const [q, setQ] = useState('');
 
-      <section className="mt-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
-        {dashboardStats.map((s) => {
-          const { Icon, bg, fg } = statIcon[s.icon as keyof typeof statIcon];
-          return (
-            <Card key={s.label} className="flex items-center gap-4 px-5 py-5">
-              <span className={`flex h-12 w-12 items-center justify-center rounded-xl ${bg}`}>
-                <Icon className={`h-6 w-6 ${fg}`} strokeWidth={1.8} />
-              </span>
-              <div>
-                <p className="text-2xl font-bold leading-tight">{s.value}</p>
-                <p className="mt-0.5 flex items-center gap-1 text-sm text-gray-500">
-                  {s.label}
-                  {s.link && <ChevronRight className="h-4 w-4" />}
-                </p>
-              </div>
-            </Card>
-          );
-        })}
+  const active = db.jobs.filter(isActive);
+  const awaiting = db.estimates.filter((e) => e.status === 'Awaiting Approval');
+  const pending = awaiting.reduce((s, e) => s + estimateTotals(e.items).subtotal, 0);
+  const dueToday = active.filter((j) => j.dueIn === 0);
+  const overdue = active.filter((j) => j.dueIn < 0);
+  const deliveries = active.filter((j) => j.delivery).sort((a, b) => new Date('1/1/2000 ' + a.delivery!.time).getTime() - new Date('1/1/2000 ' + b.delivery!.time).getTime());
+  const lowStock = db.inventory.filter(isLow);
+  const delayed = active.filter((j) => j.delayed);
+  const oldEstimates = awaiting.filter((e) => e.sentHoursAgo >= 24);
+  const followUps = db.customers.filter((c) => c.followUp);
+
+  const attention = [
+    { text: `${oldEstimates.length} estimates awaiting approval`, href: '/admin/estimates?status=awaiting', show: oldEstimates.length > 0 },
+    ...delayed.map((j) => ({ text: `${delayed.length} vehicle delayed (${vehicleName(vehicleOf(db, j.vehicleId))})`, href: `/admin/jobs/${j.id}`, show: true })),
+    { text: `${lowStock.length} parts low in stock`, href: '/admin/inventory', show: lowStock.length > 0 },
+    { text: `${followUps.length} customer follow-ups`, href: '/admin/customers', show: followUps.length > 0 },
+  ].filter((a) => a.show);
+
+  return (
+    <>
+      <TopBar
+        showUser
+        search={{ value: q, onChange: setQ, placeholder: 'Search by customer, vehicle, job number...', onSubmit: () => router.push(`/admin/jobs?q=${encodeURIComponent(q)}`) }}
+      />
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-[30px] font-bold leading-tight tracking-tight">Good morning, {user?.name.split(' ')[0]} <span className="inline-block">👋</span></h1>
+          <p className="mt-1 text-sm text-ink-500">
+            Your workshop is running smoothly. {dueToday.length} {dueToday.length === 1 ? 'vehicle' : 'vehicles'} ready for delivery today.
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="text-xs text-ink-400">{db.today}</span>
+          {/* decorative demo reading: there is no weather integration */}
+          <span title="Demo value" className="neu-sm flex items-center gap-2 px-4 py-2.5 text-sm font-semibold">
+            <Cloud className="h-5 w-5 text-warn" /> 28°C
+          </span>
+        </div>
+      </div>
+
+      <section className="grid grid-cols-2 gap-4 xl:grid-cols-4" aria-label="Summary">
+        <StatCard icon={<ClipboardList className="h-[18px] w-[18px]" />} tone="coral" label="Active Jobs" value={active.length} sub="+3 from yesterday" subTone="green" />
+        <StatCard icon={<CircleDollarSign className="h-[18px] w-[18px]" />} tone="coral" label="Awaiting Approval" value={awaiting.length} sub={`${inr(pending)} pending`} subTone="red" href="/admin/estimates?status=awaiting" />
+        <StatCard icon={<Clock3 className="h-[18px] w-[18px]" />} tone="blue" label="Due Today" value={dueToday.length} sub={`${dueToday.filter((j) => j.priority === 'High').length} high priority`} subTone="amber" href="/admin/jobs?due=today" />
+        <StatCard icon={<Flame className="h-[18px] w-[18px]" />} tone="coral" label="Overdue" value={overdue.length} sub={`${overdue.filter((j) => j.priority === 'High').length} high priority`} subTone="red" href="/admin/jobs?due=overdue" />
       </section>
 
-      <section className="mt-6 grid gap-5 xl:grid-cols-[1.55fr_1fr]">
-        <div>
-          <h2 className="mb-3 text-base font-semibold">Workshop Overview</h2>
-          <div className="relative overflow-hidden rounded-xl shadow-card" style={{ aspectRatio: '266 / 201' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={ASSET('workshop.jpg')} alt="Workshop floor" className="absolute inset-0 h-full w-full object-cover" />
-            {bays.map((b, i) => (
-              <div
-                key={i}
-                className="absolute flex w-[25.5%] flex-col justify-center rounded-lg bg-white px-[3.5%] shadow-pop"
-                style={{ left: `${b.left - 0.6}%`, top: `${b.top - 0.8}%`, height: '24.5%' }}
-              >
-                <p className="text-[15px] font-semibold leading-5">{b.name}</p>
-                <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-gray-700">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: b.dot }} />
-                  {b.status}
-                </p>
-                <p className="ml-4 text-xs text-gray-400">{b.vehicle}</p>
-                <span className="absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 bg-white" />
-              </div>
-            ))}
-          </div>
-        </div>
+      <WorkshopLiveView mode="admin" className="mt-6" hrefFor={(j) => `/admin/jobs/${j.id}`} />
 
-        <Card className="self-start px-5 py-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold">Today&apos;s Jobs</h2>
-            <Link href="/admin/job-cards" className="text-sm font-medium text-[#2f6fed]">
-              View All
+      <section className="mt-6 grid gap-5 lg:grid-cols-2">
+        <Card className="p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-bold">Today&apos;s Deliveries ({deliveries.length})</h2>
+            <Link href="/admin/jobs" aria-label="All jobs" className="text-ink-400 hover:text-ink">
+              <ChevronRight className="h-5 w-5" />
             </Link>
           </div>
-          <ul className="mt-2 divide-y divide-admin-line">
-            {todaysJobs.map((j) => (
-              <li key={j.id}>
-                <Link href={`/admin/job-cards/${j.id}`} className="flex items-center gap-4 py-3.5">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={j.image} alt="" className="h-9 w-16 object-contain" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold">{j.id}</p>
-                    <p className="text-sm text-gray-500">{j.vehicle}</p>
-                  </div>
-                  <Pill tone={j.tone}>{j.status}</Pill>
-                  <ChevronRight className="h-4 w-4 text-gray-500" />
+          <ul className="space-y-2">
+            {deliveries.map((j) => {
+              const v = vehicleOf(db, j.vehicleId);
+              return (
+                <li key={j.id}>
+                  <Link href={`/admin/jobs/${j.id}`} className="neu-row flex items-center gap-4 px-4 py-3 transition hover:-translate-y-0.5">
+                    {v && <VehicleImage carKey={v.carKey} className="h-9 w-16" />}
+                    <span className="flex-1 text-sm font-semibold">{vehicleName(v)}</span>
+                    <span className="text-sm text-ink-500">{j.delivery!.time}</span>
+                    <StatusBadge tone={j.delivery!.state === 'At Risk' ? 'red' : 'green'} className="min-w-[72px] justify-center">{j.delivery!.state}</StatusBadge>
+                  </Link>
+                </li>
+              );
+            })}
+            {deliveries.length === 0 && <li className="py-6 text-center text-sm text-ink-400">No deliveries scheduled today.</li>}
+          </ul>
+        </Card>
+
+        <Card className="p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-bold">Needs Attention</h2>
+            <ChevronRight className="h-5 w-5 text-ink-400" />
+          </div>
+          <ul className="space-y-2">
+            {attention.map((a) => (
+              <li key={a.text}>
+                <Link href={a.href} className="neu-row flex items-center gap-4 px-4 py-3.5 transition hover:-translate-y-0.5">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-warn-soft text-warn">
+                    <AlertTriangle className="h-4 w-4" />
+                  </span>
+                  <span className="flex-1 text-sm text-ink-700">{a.text}</span>
                 </Link>
               </li>
             ))}
+            {attention.length === 0 && <li className="py-6 text-center text-sm text-ink-400">Nothing needs your attention right now.</li>}
           </ul>
         </Card>
       </section>
-    </div>
+    </>
   );
 }

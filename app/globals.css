@@ -2,63 +2,194 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --ivory: #f5ece2;
+  --coral: #f26a2e;
+}
+
 html,
 body {
-  height: 100%;
+  min-height: 100%;
 }
 
 body {
-  @apply bg-admin-page text-admin-ink antialiased;
+  background: #f6eee4;
+  color: #1c1d20;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Thin fuel/progress slider used in the create-job forms */
-input[type='range'].fuel {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 6px;
-  border-radius: 9999px;
-  background: linear-gradient(to right, var(--fill) 0 var(--pct), #e5e7eb var(--pct) 100%);
-}
-input[type='range'].fuel::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 9999px;
-  background: #fff;
-  border: 3px solid var(--fill);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-  cursor: pointer;
-}
-input[type='range'].fuel::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
-  border-radius: 9999px;
-  background: #fff;
-  border: 3px solid var(--fill);
-  cursor: pointer;
+* {
+  -webkit-tap-highlight-color: transparent;
 }
 
-.scrollbar-none::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-none {
-  scrollbar-width: none;
+@layer components {
+  /* ---- raised neumorphic surfaces ---- */
+  .neu {
+    background: linear-gradient(145deg, #fffbf7 0%, #f8f0e6 100%);
+    box-shadow: theme('boxShadow.neu');
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    border-radius: 22px;
+  }
+  .neu-sm {
+    background: linear-gradient(145deg, #fffbf7 0%, #f8f0e6 100%);
+    box-shadow: theme('boxShadow.neu-sm');
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    border-radius: 16px;
+  }
+  .neu-xs {
+    background: linear-gradient(145deg, #fffbf7 0%, #f8f0e6 100%);
+    box-shadow: theme('boxShadow.neu-xs');
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 12px;
+  }
+  /* pressed / inset fields */
+  .neu-in {
+    background: #f3eadf;
+    box-shadow: theme('boxShadow.neu-in');
+    border-radius: 16px;
+  }
+  .neu-in-sm {
+    background: #f3eadf;
+    box-shadow: theme('boxShadow.neu-in-sm');
+    border-radius: 12px;
+  }
+  /* soft, almost flat row surface used inside cards (list rows, table rows) */
+  .neu-row {
+    background: linear-gradient(145deg, #fcf7f1, #f7efe5);
+    box-shadow: 4px 4px 10px rgba(190, 160, 128, 0.16), -3px -3px 8px rgba(255, 255, 255, 0.85);
+    border-radius: 16px;
+  }
+
+  /* ---- buttons ---- */
+  .btn {
+    @apply inline-flex select-none items-center justify-center gap-2 whitespace-nowrap font-medium transition duration-150 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-coral {
+    background: linear-gradient(180deg, #ff8a4a 0%, #f25a1f 100%);
+    box-shadow: theme('boxShadow.coral');
+    color: #fff;
+    border-radius: 14px;
+  }
+  .btn-coral:hover:not(:disabled) {
+    filter: brightness(1.04);
+    transform: translateY(-1px);
+  }
+  .btn-coral:active:not(:disabled) {
+    transform: translateY(0);
+    filter: brightness(0.97);
+  }
+  .btn-dark {
+    background: linear-gradient(180deg, #2c2e33 0%, #17181b 100%);
+    box-shadow: theme('boxShadow.dark');
+    color: #fff;
+    border-radius: 14px;
+  }
+  .btn-soft {
+    background: linear-gradient(145deg, #ffeee3, #ffe2d1);
+    color: #e4561b;
+    box-shadow: 3px 3px 8px rgba(242, 106, 46, 0.14), -2px -2px 6px rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+  }
+  .btn-soft:hover:not(:disabled) {
+    filter: brightness(0.98);
+  }
+  .btn-neu {
+    background: linear-gradient(145deg, #fffbf7, #f7eee3);
+    box-shadow: theme('boxShadow.neu-xs');
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    color: #1c1d20;
+    border-radius: 14px;
+  }
+  .btn-neu:hover:not(:disabled) {
+    filter: brightness(0.985);
+  }
+  .btn-blue-soft {
+    background: linear-gradient(145deg, #eaf0ff, #dce7ff);
+    color: #2152d4;
+    box-shadow: 3px 3px 8px rgba(47, 107, 255, 0.14), -2px -2px 6px rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+  }
+
+  /* ---- segmented tabs ---- */
+  .tab-dark {
+    background: linear-gradient(180deg, #2c2e33 0%, #17181b 100%);
+    box-shadow: theme('boxShadow.dark');
+    color: #fff;
+  }
+  .tab-idle {
+    background: rgba(238, 228, 214, 0.65);
+    box-shadow: inset 1px 1px 3px rgba(190, 160, 128, 0.18), inset -1px -1px 3px rgba(255, 255, 255, 0.8);
+    color: #5b5750;
+  }
+  .tab-coral {
+    background: linear-gradient(180deg, #ff8a4a 0%, #f25a1f 100%);
+    box-shadow: theme('boxShadow.coral');
+    color: #fff;
+  }
+  .tab-soft-active {
+    background: linear-gradient(145deg, #fffbf7, #f8efe4);
+    box-shadow: theme('boxShadow.neu-xs');
+    color: #e4561b;
+  }
+
+  .field {
+    @apply neu-in-sm h-11 w-full px-4 text-sm text-ink outline-none transition placeholder:text-ink-300 focus:ring-2 focus:ring-coral-300/60;
+  }
 }
 
-@keyframes marker-pop {
+@layer utilities {
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .thin-scroll::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .thin-scroll::-webkit-scrollbar-thumb {
+    background: #e0d2bf;
+    border-radius: 9999px;
+  }
+  .blend-multiply {
+    mix-blend-mode: multiply;
+  }
+}
+
+@keyframes pop {
   0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
   70% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
   100% { transform: translate(-50%, -50%) scale(1); }
 }
-.marker-pop {
-  animation: marker-pop 0.35s ease-out both;
+.pop {
+  animation: pop 0.32s ease-out both;
 }
 
-@keyframes auto-rotate {
-  0% { transform: perspective(1400px) rotateY(-7deg); }
-  50% { transform: perspective(1400px) rotateY(7deg); }
-  100% { transform: perspective(1400px) rotateY(-7deg); }
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
-.auto-rotate {
-  animation: auto-rotate 9s ease-in-out infinite;
+.skeleton {
+  background: linear-gradient(90deg, #efe4d6 25%, #f8f1e8 37%, #efe4d6 63%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 12px;
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(242, 106, 46, 0.45); }
+  100% { box-shadow: 0 0 0 10px rgba(242, 106, 46, 0); }
+}
+.pulse-ring {
+  animation: pulse-ring 1.6s ease-out infinite;
+}
+
+@keyframes slide-up {
+  from { transform: translateY(14px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.slide-up {
+  animation: slide-up 0.22s ease-out both;
 }

@@ -1,23 +1,19 @@
-import type { Metadata } from 'next';
-import { Inter, Source_Serif_4 } from 'next/font/google';
+import type { Metadata, Viewport } from 'next';
+import { Inter } from 'next/font/google';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
-const serif = Source_Serif_4({
-  subsets: ['latin'],
-  weight: ['500', '600', '700'],
-  variable: '--font-serif',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
-  title: 'AutoCare Pro',
-  description: 'Garage management for owners, workshop teams and their customers.',
+  title: 'AutoHub — Garage Management',
+  description: 'AutoHub connects garage owners, workshop technicians and vehicle owners in one workflow.',
 };
+
+export const viewport: Viewport = { themeColor: '#f6eee4', width: 'device-width', initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${serif.variable}`}>
+    <html lang="en" className={inter.variable}>
       <body className="font-sans">{children}</body>
     </html>
   );

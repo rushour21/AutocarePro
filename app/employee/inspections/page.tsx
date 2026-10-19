@@ -1,29 +1,41 @@
+'use client';
+
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
-import { myJobs } from '@/lib/data';
+import { ChevronRight } from 'lucide-react';
+import { TopBar } from '@/components/layout/AppShell';
+import { EmptyState, PageHeader, StatusBadge, VehicleImage } from '@/components/ui';
+import { visibleJobs } from '@/lib/access';
+import { useSession } from '@/lib/auth';
+import { isActive, vehicleName, vehicleOf } from '@/lib/format';
+import { useDb } from '@/lib/store';
 
 export default function InspectionsPage() {
+  const db = useDb();
+  const { user } = useSession();
+  if (!user) return null;
+  const jobs = visibleJobs(db, user).filter(isActive);
   return (
-    <div className="max-w-[900px] px-8 py-6">
-      <h1 className="text-[26px] font-bold tracking-tight">Inspections</h1>
-      <p className="mt-1 text-sm text-gray-500">Vehicles checked in today that need a damage inspection.</p>
-      <ul className="mt-6 space-y-3">
-        {myJobs.map((j) => (
-          <li key={j.id} className="flex items-center gap-6 rounded-xl border border-emp-line bg-white px-5 py-4 shadow-card">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={j.image} alt="" className="h-12 w-24 object-contain" />
-            <div className="flex-1">
-              <p className="font-semibold">#{j.id}</p>
-              <p className="text-sm text-gray-500">
-                {j.vehicle} · {j.reg}
-              </p>
-            </div>
-            <Link href={`/employee/jobs/${j.id}/inspection`} className="flex items-center gap-2 text-sm font-medium text-emp-blue">
-              Open inspection <ArrowRight className="h-4 w-4" />
-            </Link>
-          </li>
-        ))}
+    <>
+      <TopBar />
+      <PageHeader title="Inspections" subtitle="Record the condition of each vehicle you are working on" />
+      <ul className="space-y-3">
+        {jobs.map((j) => {
+          const v = vehicleOf(db, j.vehicleId);
+          const issues = j.points.filter((p) => p.status === 'minor' || p.status === 'major').length;
+          const checked = j.points.filter((p) => p.status !== 'unchecked').length;
+          return (
+            <li key={j.id}>
+              <Link href={`/employee/jobs/${j.id}/inspection`} className="neu flex items-center gap-5 !rounded-[20px] px-5 py-3.5 transition hover:-translate-y-0.5">
+                {v && <VehicleImage carKey={v.carKey} className="h-12 w-24" />}
+                <span className="flex-1"><span className="block font-bold">#{j.id} · {vehicleName(v)}</span><span className="block text-sm text-ink-500">{checked}/{j.points.length} areas checked</span></span>
+                <StatusBadge tone={issues ? 'amber' : 'gray'}>{issues} {issues === 1 ? 'issue' : 'issues'}</StatusBadge>
+                <ChevronRight className="h-5 w-5 text-ink-300" />
+              </Link>
+            </li>
+          );
+        })}
+        {jobs.length === 0 && <EmptyState title="No vehicles to inspect" />}
       </ul>
-    </div>
+    </>
   );
 }
