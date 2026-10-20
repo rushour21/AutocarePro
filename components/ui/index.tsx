@@ -89,6 +89,18 @@ export function StatusBadge({ tone, children, dot, className, size = 'md' }: { t
 
 /* ------------------------------------------------------------------ avatar */
 export function Avatar({ src, name, size = 36, className }: { src?: string; name?: string; size?: number; className?: string }) {
+  if (!src) {
+    const initials = (name ?? '?').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?';
+    return (
+      <span
+        aria-label={name}
+        className={cn('flex shrink-0 items-center justify-center rounded-full bg-coral-100 font-bold text-coral-600 shadow-neu-xs ring-2 ring-white', className)}
+        style={{ width: size, height: size, fontSize: Math.max(10, size * 0.38) }}
+      >
+        {initials}
+      </span>
+    );
+  }
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img

@@ -5,18 +5,9 @@ import { Plus } from 'lucide-react';
 import { TopBar } from '@/components/layout/AppShell';
 import { Button, EmptyState, Field, FilterTabs, Input, Modal, Select, StatusBadge, VehicleImage, useToast } from '@/components/ui';
 import { addVehicle } from '@/lib/actions';
+import { MODELS } from '@/lib/catalog';
 import { km, serviceDueLabel, vehicleName } from '@/lib/format';
 import { useDb } from '@/lib/store';
-import type { CarKey } from '@/lib/types';
-
-const MODELS: { key: string; make: string; model: string; variant: string; fuel: 'Petrol' | 'Diesel'; carKey: CarKey }[] = [
-  { key: 'bmw3', make: 'BMW', model: '3 Series', variant: '330i M Sport', fuel: 'Petrol', carKey: 'bmw3' },
-  { key: 'audiq5', make: 'Audi', model: 'Q5', variant: '2.0 TFSI', fuel: 'Petrol', carKey: 'audiq5' },
-  { key: 'glc', make: 'Mercedes', model: 'GLC', variant: '300 4MATIC', fuel: 'Petrol', carKey: 'glc' },
-  { key: 'fortuner', make: 'Toyota', model: 'Fortuner', variant: '2.8 Diesel', fuel: 'Diesel', carKey: 'fortuner' },
-  { key: 'bmwx5', make: 'BMW', model: 'X5', variant: 'xDrive30d', fuel: 'Diesel', carKey: 'bmwx5' },
-  { key: 'rangerover', make: 'Range Rover', model: 'Sport', variant: '3.0 D', fuel: 'Diesel', carKey: 'rangerover' },
-];
 
 export default function VehiclesPage() {
   const db = useDb();

@@ -93,6 +93,24 @@ export interface NewJobInput {
   notes?: string;
   dueIn?: number;
   by?: string;
+  /** check-in inspection recorded in the New Job wizard */
+  points?: InspectionPoint[];
+}
+
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WKD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+/** `today` is the demo date label, e.g. "Mon, 16 Mar 2025"; returns the label `days` later. */
+function dateAfter(today: string, days: number) {
+  const m = today.match(/(\d+) (\w+) (\d{4})/);
+  const base = m ? new Date(Date.UTC(Number(m[3]), MON.indexOf(m[2]), Number(m[1]))) : new Date();
+  base.setUTCDate(base.getUTCDate() + days);
+  return { wd: WKD[base.getUTCDay()], d: base.getUTCDate(), mon: MON[base.getUTCMonth()], y: base.getUTCFullYear() };
+}
+
+/** An inspection with every point unchecked: the starting state for a new job. */
+export function blankPoints(): InspectionPoint[] {
+  const tpl = createSeed().jobs.find((j) => j.id === 'J1020')!;
+  return tpl.points.map((p) => ({ ...p, status: 'unchecked' as const, notes: '', photos: [] }));
 }
 
 export function createJob(input: NewJobInput): string {
@@ -103,21 +121,33 @@ export function createJob(input: NewJobInput): string {
     const v = d.vehicles.find((x) => x.id === input.vehicleId)!;
     const seed = createSeed().jobs.find((j) => j.id === 'J1020')!; // blank templates for tasks/checklist/points
     const cat = (['brake', 'service', 'body', 'ac'].includes(input.category) ? input.category : 'service') as Job['serviceCategory'];
+    const dueIn = input.dueIn ?? 4;
+    const due = dateAfter(d.today, dueIn);
+    // next free window on the technician's calendar, so the job shows up in Calendar and Today's Schedule
+    const taken = d.jobs.filter((x) => x.techId === input.techId && x.slot && x.stage !== 'delivered').map((x) => x.slot!.end);
+    const start = Math.min(17, Math.max(9, Math.ceil(Math.max(0, ...taken) * 4) / 4));
+    const slot: Job['slot'] = { x0: 0.05, x1: Math.min(5, dueIn + 0.95), start, end: start + 1.5 };
     const tpl = createSeed().jobs.find((j) => j.serviceCategory === cat && j.stage === 'pending') ?? seed;
     const job: Job = {
       ...structuredClone(tpl),
       id, vehicleId: v.id, customerId: v.customerId, techId: input.techId, stage: 'pending', priority: input.priority, progress: 0,
       service: input.service, serviceCategory: cat, bayId: undefined, elapsed: undefined, startedLabel: NOW(),
-      estCompletion: 'Thu, 20 Mar 2025', estCompletionDate: '20 Mar 2025, 6:00 PM', promised: 'Thu, 20 Mar 2025, 05:00 PM', dueLabel: '20 Mar 2025, 5:00 PM',
-      dueIn: input.dueIn ?? 4, delivery: undefined, delayed: false, notes: input.notes ?? '', slot: undefined,
+      estCompletion: `${due.wd}, ${due.d} ${due.mon} ${due.y}`, estCompletionDate: `${due.d} ${due.mon} ${due.y}, 6:00 PM`, promised: `${due.wd}, ${due.d} ${due.mon} ${due.y}, 05:00 PM`, dueLabel: `${due.d} ${due.mon} ${due.y}, 5:00 PM`,
+      dueIn: dueIn, delivery: undefined, delayed: false, notes: input.notes ?? '', slot,
       trackingToken: `trk_${id.toLowerCase()}_${Math.random().toString(36).slice(2, 10)}${Math.random().toString(36).slice(2, 10)}`,
       timeline: { inspection: undefined, approval: undefined, repair: undefined, quality: undefined, delivery: undefined },
       activity: [{ id: uid('a'), at: NOW(), by: input.by ?? 'Admin', text: 'Job created' }],
       photos: [], completedOn: undefined, completedInDays: undefined,
     };
-    job.points = job.points.map((p) => ({ ...p, status: 'unchecked', notes: '', photos: [] }));
+    if (cat === 'service' && input.service !== 'General Service') {
+      job.tasks = ['Inspect & diagnose', input.service, 'Road test & quality check', 'Final inspection'].map((title) => ({ id: uid('t'), title, status: 'Pending' as const }));
+    }
+    job.points = input.points ? structuredClone(input.points) : blankPoints();
+    const flagged = job.points.filter((p) => p.status === 'minor' || p.status === 'major').length;
+    if (flagged) job.activity.unshift({ id: uid('a'), at: NOW(), by: input.by ?? 'Admin', text: `Check-in inspection: ${flagged} ${flagged === 1 ? 'area' : 'areas'} flagged` });
     job.checklist = job.checklist.map((c) => ({ ...c, done: false }));
     d.jobs.unshift(job);
+    d.notifications.unshift({ id: uid('n'), customerId: v.customerId, kind: 'service', read: false, ago: 'Just now', href: `/customer/jobs/${id}`, title: 'Your vehicle has been booked in', sub: `${v.make} ${v.model} · ${input.service}` });
   });
   return id;
 }
@@ -289,17 +319,21 @@ export function addPart(p: { name: string; category: string; stock: number; minS
 }
 
 // ------------------------------------------------------------------ people
-export function addCustomer(c: { name: string; phone: string; email?: string }) {
+export function addCustomer(c: { name: string; phone: string; email?: string }): string {
+  const id = uid('c');
   mutate((d) => {
-    const cu: Customer = { id: uid('c'), name: c.name, phone: c.phone, email: c.email ?? '', avatar: '/assets/avatars/c-rohit-kumar.png', totalSpent: 0, lastService: '—' };
+    const cu: Customer = { id, name: c.name, phone: c.phone, email: c.email ?? '', avatar: '', totalSpent: 0, lastService: '—' };
     d.customers.unshift(cu);
   });
+  return id;
 }
 
-export function addVehicle(v: Omit<Vehicle, 'id'>) {
+export function addVehicle(v: Omit<Vehicle, 'id'>): string {
+  const id = uid('v');
   mutate((d) => {
-    d.vehicles.unshift({ id: uid('v'), ...v });
+    d.vehicles.unshift({ id, ...v });
   });
+  return id;
 }
 
 export function addMember(u: { name: string; title: string; email: string; phone: string }) {

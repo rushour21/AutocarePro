@@ -23,7 +23,7 @@ export default function CustomersPage() {
   }, [db.customers, q]);
 
   const cols: Column<Customer>[] = [
-    { key: 'n', header: 'Name', cell: (c) => <span className="flex items-center gap-3"><Avatar src={c.avatar} size={34} /><span className="font-semibold">{c.name}</span></span> },
+    { key: 'n', header: 'Name', cell: (c) => <span className="flex items-center gap-3"><Avatar src={c.avatar} name={c.name} size={34} /><span className="font-semibold">{c.name}</span></span> },
     { key: 'p', header: 'Phone', cell: (c) => c.phone },
     { key: 'v', header: 'Vehicles', cell: (c) => <span className="font-semibold">{db.vehicles.filter((v) => v.customerId === c.id).length}</span>, className: 'text-center', headClassName: 'text-center' },
     { key: 's', header: 'Total Spent', cell: (c) => <span className="font-semibold">{inr(c.totalSpent)}</span> },

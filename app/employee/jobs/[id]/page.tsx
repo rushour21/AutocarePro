@@ -71,7 +71,7 @@ function Inner() {
         </div>
         <div className="space-y-4 xl:pt-[62px]">
           <Card className="flex items-center gap-4 p-4">
-            <Avatar src={cust?.avatar} size={48} />
+            <Avatar src={cust?.avatar} name={cust?.name} size={48} />
             <div className="min-w-0 flex-1"><p className="font-semibold">{cust?.name}</p><p className="text-sm text-ink-500">{cust?.phone}</p></div>
             <a href={`tel:${phone}`} aria-label="Call customer" className="btn btn-soft h-10 w-10 !rounded-xl"><Phone className="h-4 w-4" /></a>
             <a href={`https://wa.me/${phone.replace('+', '')}`} target="_blank" rel="noreferrer" aria-label="Message customer on WhatsApp" className="btn btn-soft h-10 w-10 !rounded-xl"><MessageCircle className="h-4 w-4" /></a>

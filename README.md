@@ -22,7 +22,7 @@ npm run typecheck && npm run lint && npm run build
 
 - **Public:** `/` landing, `/login`
 - **Private share link `/track/[token]`** (no sign-in; token only, job numbers never resolve): overview (becomes “Your Vehicle is Ready!” when done), `live`, `details`, `inspection`, `photos`, `estimate` (approve / request changes), `timeline`, `invoice`, `report`, `feedback`
-- **Admin `/admin`:** dashboard + Workshop Live View, `jobs` (board / list / calendar), `jobs/[id]`, `jobs/[id]/inspection`, `jobs/new`, `calendar`, `customers`, `vehicles`, `estimates` (+`[id]`), `inventory`, `team`, `reports`, `settings` (+ workshop, notifications, integrations, subscription, security)
+- **Admin `/admin`:** dashboard + Workshop Live View, `jobs` (board / list / calendar), `jobs/[id]`, `jobs/[id]/inspection`, `jobs/new` (5-step wizard: pick a saved vehicle or add a new customer + vehicle → service → 2D check-in inspection where you tap the car to flag damaged parts → estimate → review), `calendar`, `customers`, `vehicles`, `estimates` (+`[id]`), `inventory`, `team`, `reports`, `settings` (+ workshop, notifications, integrations, subscription, security)
 - **Technician `/employee`:** dashboard, `jobs`, `jobs/[id]` (+ `inspection`, `checklist`), `inspections`, `parts-request`, `calendar`, `messages`, `team`, `profile`
 - **Customer `/customer`:** dashboard, `vehicles`, `bookings` (+`new`), `estimates` (+`[id]`), `invoices`, `history`, `notifications`, `profile` (+ payment, security), `share` (copy / open / renew links), `support`, `jobs/[id]` (+ `details`)
 

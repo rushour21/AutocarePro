@@ -105,7 +105,7 @@ function Inner() {
             </Card>
             <Card className="divide-y divide-ivory-300/70 p-2">
               <div className="flex items-center gap-4 px-4 py-4">
-                <Avatar src={cust?.avatar} size={44} />
+                <Avatar src={cust?.avatar} name={cust?.name} size={44} />
                 <div className="flex-1">
                   <p className="font-semibold">{cust?.name}</p>
                   <p className="text-sm text-ink-500">{cust?.phone}</p>

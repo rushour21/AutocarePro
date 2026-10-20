@@ -4,8 +4,9 @@ import clsx from 'clsx';
 import { Camera, Download, Expand, ImagePlus, Plus, Share2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { addPointPhoto, setPoint } from '@/lib/actions';
+import { vehicleOf } from '@/lib/format';
 import { useDb } from '@/lib/store';
-import type { DamageType, InspectionPoint, Job, PointStatus, Severity, Zone } from '@/lib/types';
+import type { CarKey, DamageType, InspectionPoint, PointStatus, Severity, Zone } from '@/lib/types';
 import { Button, Card, Checkbox, EmptyState, FilterTabs, StatusBadge, Textarea, useToast } from '@/components/ui';
 import { mutate } from '@/lib/store';
 import { CAR_COLOR, CarTopSvg } from './CarTop';
@@ -65,7 +66,7 @@ function Marker({ p, mode, selected, onSelect, style, disabled }: { p: Inspectio
 }
 
 /* ------------------------------------------------------------------ composite (car + six angle tiles) */
-function CarComposite({ points, mode, selectedId, onSelect, onAdd, canEdit }: { points: InspectionPoint[]; mode: Mode; selectedId: string; onSelect: (id: string) => void; onAdd: (x: number, y: number) => void; canEdit: boolean }) {
+function CarComposite({ points, mode, selectedId, onSelect, onAdd, canEdit, color }: { points: InspectionPoint[]; mode: Mode; selectedId: string; onSelect: (id: string) => void; onAdd: (x: number, y: number) => void; canEdit: boolean; color: string }) {
   const carRef = useRef<HTMLDivElement>(null);
   const body = points.filter((p) => p.zone === 'body');
   const pos = (x: number, y: number): React.CSSProperties => ({ left: `${((x + 6) / 112) * 100}%`, top: `${((y * 2.5 + 4) / 258) * 100}%`, transform: 'translate(-50%,-50%)' });
@@ -102,7 +103,7 @@ function CarComposite({ points, mode, selectedId, onSelect, onAdd, canEdit }: { 
         }}
       >
         <div className="relative w-full" style={{ aspectRatio: '112 / 258' }}>
-          <CarTopSvg color={CAR_COLOR.bmw3} className="absolute inset-0 h-full w-full" />
+          <CarTopSvg color={color} className="absolute inset-0 h-full w-full" />
           {body.map((p) => (
             <Marker key={p.id} p={p} mode={mode} selected={p.id === selectedId} onSelect={() => onSelect(p.id)} style={pos(p.x, p.y)} />
           ))}
@@ -118,9 +119,24 @@ function CarComposite({ points, mode, selectedId, onSelect, onAdd, canEdit }: { 
 }
 
 /* ------------------------------------------------------------------ main board */
-export function InspectionBoard({ jobId, mode, canEdit = true, layout }: { jobId: string; mode: Mode; canEdit?: boolean; layout?: 'split' | 'stack' }) {
+export interface InspectionDraft {
+  points: InspectionPoint[];
+  onChange: (points: InspectionPoint[]) => void;
+}
+
+/**
+ * Shared inspection board. Normally it edits a saved job (`jobId`); the New Job wizard passes a `draft`
+ * instead so the check-in can be recorded before the job exists.
+ */
+export function InspectionBoard({ jobId = '', mode, canEdit = true, layout, draft, carKey }: { jobId?: string; mode: Mode; canEdit?: boolean; layout?: 'split' | 'stack'; draft?: InspectionDraft; carKey?: CarKey }) {
   const db = useDb();
-  const job: Job | undefined = db.jobs.find((j) => j.id === jobId);
+  const savedJob = db.jobs.find((j) => j.id === jobId);
+  const job: { id: string; points: InspectionPoint[]; photos: string[] } | undefined = draft ? { id: '', points: draft.points, photos: [] } : savedJob;
+  const color = CAR_COLOR[carKey ?? (savedJob ? vehicleOf(db, savedJob.vehicleId)?.carKey : undefined) ?? 'bmw3'];
+  const patchPoint = (pid: string, patch: Partial<InspectionPoint>) =>
+    draft ? draft.onChange(draft.points.map((p) => (p.id === pid ? { ...p, ...patch } : p))) : setPoint(jobId, pid, patch);
+  const pushPhoto = (pid: string, url: string) =>
+    draft ? draft.onChange(draft.points.map((p) => (p.id === pid ? { ...p, photos: [...p.photos, url] } : p))) : addPointPhoto(jobId, pid, url);
   const [tab, setTab] = useState<'3d' | 'photos' | 'checklist' | 'findings'>('3d');
   const [selectedId, setSelectedId] = useState('p-front-bumper');
   const toast = useToast();
@@ -143,25 +159,26 @@ export function InspectionBoard({ jobId, mode, canEdit = true, layout }: { jobId
     const c = { good: 0, minor: 0, major: 0, unchecked: 0 } as Record<PointStatus, number>;
     job?.points.forEach((p) => c[p.status]++);
     return c;
-  }, [job]);
+  }, [job?.points]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!job || !point) return <EmptyState title="Inspection not available" />;
 
   const photos = point.photos;
   const addPhoto = () => {
     const next = SAMPLE_PHOTOS.find((p) => !point.photos.includes(p)) ?? SAMPLE_PHOTOS[0];
-    addPointPhoto(job.id, point.id, next);
+    pushPhoto(point.id, next);
     toast.show('Photo added to ' + point.label);
   };
   const addPoint = (x: number, y: number) => {
-    mutate((d) => {
-      const j = d.jobs.find((q) => q.id === job.id);
-      if (!j) return;
-      const n = j.points.filter((p) => p.id.startsWith('p-custom')).length + 1;
-      const id = `p-custom-${n}`;
-      j.points.push({ id, label: `Custom point ${n}`, zone: 'body', x, y, status: 'minor', damage: 'Custom', severity: 'Minor', notes: '', photos: [] });
-      setSelectedId(id);
-    });
+    const n = job.points.filter((p) => p.id.startsWith('p-custom')).length + 1;
+    const id = `p-custom-${n}`;
+    const pt: InspectionPoint = { id, label: `Custom point ${n}`, zone: 'body', x, y, status: 'minor', damage: 'Custom', severity: 'Minor', notes: '', photos: [] };
+    if (draft) draft.onChange([...draft.points, pt]);
+    else
+      mutate((d) => {
+        d.jobs.find((q) => q.id === job.id)?.points.push(pt);
+      });
+    setSelectedId(id);
   };
 
   const damageLegend = (
@@ -171,7 +188,7 @@ export function InspectionBoard({ jobId, mode, canEdit = true, layout }: { jobId
           <button
             type="button"
             disabled={!canEdit}
-            onClick={() => setPoint(job.id, point.id, { damage: d.key, status: point.status === 'good' || point.status === 'unchecked' ? 'minor' : point.status })}
+            onClick={() => patchPoint(point.id, { damage: d.key, status: point.status === 'good' || point.status === 'unchecked' ? 'minor' : point.status })}
             className={clsx('flex items-center gap-2.5 rounded-lg px-1 text-[13px] transition', point.damage === d.key && point.status !== 'unchecked' && point.status !== 'good' ? 'font-semibold text-ink' : 'text-ink-500')}
             aria-pressed={point.damage === d.key}
           >
@@ -234,7 +251,14 @@ export function InspectionBoard({ jobId, mode, canEdit = true, layout }: { jobId
         {thumbs}
       </div>
       <div>
-        <p className="mb-2 text-sm font-semibold">Severity</p>
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-sm font-semibold">Severity</p>
+          {canEdit && (point.status === 'minor' || point.status === 'major') && (
+            <button type="button" onClick={() => { patchPoint(point.id, { status: 'unchecked', severity: 'Minor', damage: 'Scratch', notes: '' }); setSaved(false); }} className="text-xs font-semibold text-ink-400 underline-offset-2 hover:text-bad hover:underline">
+              Clear issue
+            </button>
+          )}
+        </div>
         <div className="neu-in-sm grid grid-cols-3 gap-1.5 !rounded-2xl p-1.5" role="radiogroup" aria-label="Severity">
           {(['Minor', 'Major', 'Critical'] as Severity[]).map((s) => {
             const on = severity === s;
@@ -247,6 +271,8 @@ export function InspectionBoard({ jobId, mode, canEdit = true, layout }: { jobId
                 onClick={() => {
                   setSeverity(s);
                   setSaved(false);
+                  // in the New Job wizard there is no job yet, so changes apply straight away
+                  if (draft) patchPoint(point.id, { severity: s, status: s === 'Minor' ? 'minor' : 'major' });
                 }}
                 className={clsx(
                   'h-10 rounded-xl text-sm font-semibold transition',
@@ -268,6 +294,7 @@ export function InspectionBoard({ jobId, mode, canEdit = true, layout }: { jobId
             setNotes(e.target.value);
             setSaved(false);
           }}
+          onBlur={() => draft && notes !== point.notes && patchPoint(point.id, { notes })}
           placeholder="Add notes about this area…"
           className="!min-h-[72px]"
           aria-label="Notes"
@@ -281,7 +308,7 @@ export function InspectionBoard({ jobId, mode, canEdit = true, layout }: { jobId
           disabled={!canEdit}
           className="!h-12"
           onClick={() => {
-            setPoint(job.id, point.id, { severity, notes, status: point.status === 'good' || point.status === 'unchecked' ? 'minor' : severity === 'Minor' ? 'minor' : 'major' });
+            patchPoint(point.id, { severity, notes, status: point.status === 'good' || point.status === 'unchecked' ? 'minor' : severity === 'Minor' ? 'minor' : 'major' });
             setSaved(true);
             toast.show('Inspection saved');
           }}
@@ -333,7 +360,7 @@ export function InspectionBoard({ jobId, mode, canEdit = true, layout }: { jobId
                 role="radio"
                 aria-checked={on}
                 disabled={!canEdit}
-                onClick={() => setPoint(job.id, point.id, { status: k, severity: k === 'major' ? 'Major' : 'Minor' })}
+                onClick={() => patchPoint(point.id, { status: k, severity: k === 'major' ? 'Major' : 'Minor' })}
                 className={clsx('flex h-12 items-center gap-3 rounded-2xl px-4 text-sm font-medium transition', on ? 'bg-coral-100 text-coral-600 shadow-neu-xs' : 'neu-in-sm text-ink-500')}
               >
                 <span className={clsx('flex h-5 w-5 items-center justify-center rounded-full border-2', on ? 'border-coral-500' : 'border-ink-200 bg-white')}>{on && <span className="h-2 w-2 rounded-full bg-coral-500" />}</span>
@@ -349,7 +376,7 @@ export function InspectionBoard({ jobId, mode, canEdit = true, layout }: { jobId
           value={notes}
           disabled={!canEdit}
           onChange={(e) => setNotes(e.target.value)}
-          onBlur={() => notes !== point.notes && setPoint(job.id, point.id, { notes })}
+          onBlur={() => notes !== point.notes && patchPoint(point.id, { notes })}
           placeholder="Add notes about this area…"
           className="!min-h-[64px]"
           aria-label="Notes"
@@ -363,7 +390,7 @@ export function InspectionBoard({ jobId, mode, canEdit = true, layout }: { jobId
     lay === 'split' ? (
       <div className="grid gap-5 lg:grid-cols-[1.25fr_1fr]">
         <Card className="p-5">
-          <CarComposite points={job.points} mode={mode} selectedId={point.id} onSelect={setSelectedId} onAdd={addPoint} canEdit={canEdit} />
+          <CarComposite color={color} points={job.points} mode={mode} selectedId={point.id} onSelect={setSelectedId} onAdd={addPoint} canEdit={canEdit} />
           <div className="mt-5">{damageLegend}</div>
           {canEdit && <p className="mt-4 text-xs text-ink-400">Tap a marker to inspect it, or tap the vehicle to add a custom point.</p>}
         </Card>
@@ -372,7 +399,7 @@ export function InspectionBoard({ jobId, mode, canEdit = true, layout }: { jobId
     ) : (
       <div className="space-y-4">
         <Card className="p-5">
-          <CarComposite points={job.points} mode={mode} selectedId={point.id} onSelect={setSelectedId} onAdd={addPoint} canEdit={canEdit} />
+          <CarComposite color={color} points={job.points} mode={mode} selectedId={point.id} onSelect={setSelectedId} onAdd={addPoint} canEdit={canEdit} />
           <div className="mt-5">{conditionLegend}</div>
         </Card>
         {techPanel}
@@ -395,7 +422,7 @@ export function InspectionBoard({ jobId, mode, canEdit = true, layout }: { jobId
     <Card className="divide-y divide-ivory-300/60 p-2">
       {job.points.map((p) => (
         <div key={p.id} className="flex items-center gap-3 px-3 py-2.5">
-          <Checkbox label={`${p.label} checked`} checked={p.status !== 'unchecked'} disabled={!canEdit} onChange={(v) => setPoint(job.id, p.id, { status: v ? 'good' : 'unchecked' })} />
+          <Checkbox label={`${p.label} checked`} checked={p.status !== 'unchecked'} disabled={!canEdit} onChange={(v) => patchPoint(p.id, { status: v ? 'good' : 'unchecked' })} />
           <button className="flex-1 text-left text-sm" onClick={() => { setSelectedId(p.id); setTab('3d'); }}>
             {p.label}
           </button>
@@ -452,12 +479,12 @@ export function InspectionBoard({ jobId, mode, canEdit = true, layout }: { jobId
           ]}
         />
         <div className="flex gap-2.5">
-          <button aria-label="Copy link" title="Share" className="btn btn-neu h-11 w-11 !rounded-xl" onClick={() => { navigator.clipboard?.writeText(window.location.href); toast.show('Link copied'); }}>
+          {!draft && <button aria-label="Copy link" title="Share" className="btn btn-neu h-11 w-11 !rounded-xl" onClick={() => { navigator.clipboard?.writeText(window.location.href); toast.show('Link copied'); }}>
             <Share2 className="h-[18px] w-[18px]" />
-          </button>
-          <button aria-label="Download report" title="Print / save as PDF" className="btn btn-neu h-11 w-11 !rounded-xl" onClick={() => window.print()}>
+          </button>}
+          {!draft && <button aria-label="Download report" title="Print / save as PDF" className="btn btn-neu h-11 w-11 !rounded-xl" onClick={() => window.print()}>
             <Download className="h-[18px] w-[18px]" />
-          </button>
+          </button>}
           <button aria-label="Fullscreen" title="Fullscreen" className="btn btn-neu h-11 w-11 !rounded-xl" onClick={() => (document.fullscreenElement ? document.exitFullscreen() : root.current?.requestFullscreen?.())}>
             <Expand className="h-[18px] w-[18px]" />
           </button>
