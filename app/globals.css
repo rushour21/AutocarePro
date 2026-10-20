@@ -12,6 +12,13 @@ body {
   min-height: 100%;
 }
 
+/* desktop: a denser scale so dashboards fit one screen like the reference */
+@media (min-width: 1024px) {
+  html {
+    font-size: 14px;
+  }
+}
+
 body {
   background: #f6eee4;
   color: #1c1d20;

@@ -96,9 +96,11 @@ export interface WorkshopLiveViewProps {
   defaultView?: '2d' | '3d';
   className?: string;
   overlay?: React.ReactNode;
+  /** short, wide banner with a Live badge + subtitle (admin dashboard) */
+  wide?: boolean;
 }
 
-export function WorkshopLiveView({ mode, variant = 'full', userId, highlightJobId, hrefFor, defaultView = '3d', className, overlay }: WorkshopLiveViewProps) {
+export function WorkshopLiveView({ mode, variant = 'full', userId, highlightJobId, hrefFor, defaultView = '3d', className, overlay, wide }: WorkshopLiveViewProps) {
   const db = useDb();
   const toast = useToast();
   const id = useId().replace(/:/g, '');
@@ -344,8 +346,20 @@ export function WorkshopLiveView({ mode, variant = 'full', userId, highlightJobI
 
   /* ---------------- chrome ---------------- */
   const header = variant === 'full' && (
-    <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-5">
-      <h2 className="text-[19px] font-bold">Workshop Live View</h2>
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-5 pb-3 pt-5">
+      {wide ? (
+        <div className="min-w-0">
+          <h2 className="flex items-center gap-2.5 whitespace-nowrap text-[17px] font-bold">
+            Workshop Live View
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-ok-soft px-2 py-0.5 text-[11px] font-semibold text-ok">
+              <span className="h-1.5 w-1.5 rounded-full bg-ok" /> Live
+            </span>
+          </h2>
+          <p className="mt-0.5 hidden truncate text-xs text-ink-500 sm:block">Real-time view of your workshop and current job status.</p>
+        </div>
+      ) : (
+        <h2 className="text-[19px] font-bold">Workshop Live View</h2>
+      )}
       <div className="flex items-center gap-2">
         <div className="flex gap-1.5" role="tablist" aria-label="View mode">
           {(['2d', '3d'] as const).map((v) => (
@@ -354,7 +368,7 @@ export function WorkshopLiveView({ mode, variant = 'full', userId, highlightJobI
               role="tab"
               aria-selected={view === v}
               onClick={() => setView(v)}
-              className={clsx('h-10 min-w-[58px] rounded-xl px-4 text-sm font-semibold transition', view === v ? 'tab-dark' : 'btn-neu')}
+              className={clsx('h-9 min-w-[52px] rounded-xl px-4 text-sm font-semibold transition', view === v ? 'tab-dark' : 'btn-neu')}
             >
               {v.toUpperCase()}
             </button>
@@ -365,7 +379,7 @@ export function WorkshopLiveView({ mode, variant = 'full', userId, highlightJobI
           aria-label={full ? 'Exit fullscreen' : 'Fullscreen'}
           title={full ? 'Exit fullscreen' : 'Fullscreen'}
           onClick={() => (document.fullscreenElement ? document.exitFullscreen() : wrap.current?.requestFullscreen?.())}
-          className="btn btn-neu h-10 w-10 !rounded-xl"
+          className="btn btn-neu h-9 w-9 !rounded-xl"
         >
           {full ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
         </button>
@@ -387,12 +401,24 @@ export function WorkshopLiveView({ mode, variant = 'full', userId, highlightJobI
   const coverLeft = Math.min(0, Math.max(100 - COVER_ZOOM * 100, 50 - fx * COVER_ZOOM * 100));
   const coverTop = Math.min(0, Math.max(100 - coverH * 100, 50 - fy * coverH * 100));
   const cover = variant === 'cover' && view === '3d';
-  const canvas = (
-    <div className={clsx('relative overflow-hidden [container-type:inline-size]', variant === 'full' ? 'mx-3 mb-3 rounded-[20px] shadow-neu-in' : 'rounded-2xl')} style={{ aspectRatio: cover ? `${COVER_AR} / 1` : view === '2d' ? `${plan.w} / ${plan.h}` : `${VIEW_W} / ${VIEW_H}`, background: view === '2d' ? '#efe8dd' : 'linear-gradient(180deg,#f8f2e9,#ebe2d4)' }}>
-      {view === '2d' ? scene2d : cover ? <div className="absolute" style={{ width: `${COVER_ZOOM * 100}%`, left: `${coverLeft}%`, top: `${coverTop}%` }}>{scene3d}</div> : scene3d}
-      {variant === 'full' && mode !== 'customer' && view === '3d' &&
-        bubbles.map((b) => (
-          <div key={b.stage} className="pointer-events-none absolute z-10" style={{ left: `${b.l}%`, top: `${b.t}%`, transform: 'translate(-50%, -100%)' }}>
+  // `wide`: crop the isometric scene to a short banner centred on the floor
+  const WIDE_AR = 2.25;
+  const WIDE_ZOOM = 1.06;
+  const wide3d = !!wide && variant === 'full' && view === '3d';
+  const wideH = WIDE_ZOOM * (VIEW_H / VIEW_W) * WIDE_AR; // wrapper height as a fraction of the banner
+  const wideBox = (() => {
+    const [px, py] = P(plan.w / 2, plan.h / 2, 20);
+    return {
+      left: Math.min(0, Math.max(100 - WIDE_ZOOM * 100, 50 - (px / VIEW_W) * WIDE_ZOOM * 100)),
+      top: Math.min(0, Math.max(100 - wideH * 100, 50 - (py / VIEW_H) * wideH * 100)),
+    };
+  })();
+  // keep stage chips inside the cropped window (a chip sits above its car)
+  const chipMinT = wide3d ? (-wideBox.top / wideH) / 1 + (6.4 * WIDE_AR) / wideH + 1 : -Infinity;
+  const bubbleEls =
+    variant === 'full' && mode !== 'customer' && view === '3d'
+      ? bubbles.map((b) => (
+          <div key={b.stage} className="pointer-events-none absolute z-10" style={{ left: `${b.l}%`, top: `${Math.max(b.t, chipMinT)}%`, transform: 'translate(-50%, -100%)' }}>
             <div className="relative flex items-center gap-[0.6cqw] rounded-[1.2cqw] bg-[#fffaf4]/95 px-[1.4cqw] py-[0.9cqw] shadow-[0_6px_16px_rgba(120,90,50,0.22)]" style={{ fontSize: 'clamp(9px, 1.55cqw, 15px)' }}>
               <span className="flex h-[2.2em] w-[2.2em] items-center justify-center rounded-full" style={{ background: `${STAGE_COLOR[b.stage]}22`, color: STAGE_COLOR[b.stage] }}>
                 <Wrench className="h-[1.1em] w-[1.1em]" />
@@ -404,7 +430,17 @@ export function WorkshopLiveView({ mode, variant = 'full', userId, highlightJobI
               <span className="absolute left-1/2 top-full h-[0.9em] w-[0.9em] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-[#fffaf4]/95" />
             </div>
           </div>
-        ))}
+        ))
+      : null;
+  const canvas = (
+    <div className={clsx('relative overflow-hidden [container-type:inline-size]', variant === 'full' ? 'mx-3 mb-3 rounded-[20px] shadow-neu-in' : 'rounded-2xl')} style={{ aspectRatio: cover ? `${COVER_AR} / 1` : wide && variant === 'full' ? `${WIDE_AR} / 1` : view === '2d' ? `${plan.w} / ${plan.h}` : `${VIEW_W} / ${VIEW_H}`, background: view === '2d' ? '#efe8dd' : 'linear-gradient(180deg,#f8f2e9,#ebe2d4)' }}>
+      {view === '2d' ? scene2d : cover ? <div className="absolute" style={{ width: `${COVER_ZOOM * 100}%`, left: `${coverLeft}%`, top: `${coverTop}%` }}>{scene3d}</div> : wide3d ? (
+        <div className="absolute" style={{ width: `${WIDE_ZOOM * 100}%`, left: `${wideBox.left}%`, top: `${wideBox.top}%` }}>
+          {scene3d}
+          {bubbleEls}
+        </div>
+      ) : scene3d}
+      {!wide3d && bubbleEls}
       {variant === 'compact' && (
         <span className="absolute bottom-3 left-3 rounded-xl bg-[#fffaf4]/95 px-3 py-1.5 text-xs font-semibold text-ink shadow-neu-xs">
           <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-coral-500" />

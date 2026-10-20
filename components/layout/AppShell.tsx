@@ -140,7 +140,7 @@ function NavList({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => v
   const path = usePathname();
   const settingsGeneral = path === '/admin/settings';
   return (
-    <nav className="mt-7 flex flex-col gap-1.5" aria-label="Main">
+    <nav className="mt-5 flex flex-col gap-1" aria-label="Main">
       {items.map(({ href, label, icon: Icon, exact, also }) => {
         let active = exact ? path === href : path === href || path.startsWith(href + '/') || (also ?? []).some((a) => path.startsWith(a));
         // reference quirk: the settings landing page highlights the first ("Dashboard") entry
@@ -152,12 +152,12 @@ function NavList({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => v
             onClick={onNavigate}
             aria-current={active ? 'page' : undefined}
             className={clsx(
-              'group relative flex items-center gap-3.5 rounded-2xl px-4 py-3 text-[14px] font-medium transition',
+              'group relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[13.5px] font-medium transition',
               active ? 'bg-gradient-to-r from-coral-100 to-coral-50 text-coral-600 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.7),0_4px_12px_rgba(242,106,46,0.10)]' : 'text-ink-600 hover:bg-white/55',
             )}
           >
-            <span className={clsx('flex h-8 w-8 items-center justify-center rounded-full', active ? 'text-coral-500' : 'text-ink-500')}>
-              <Icon className="h-[19px] w-[19px]" strokeWidth={1.8} />
+            <span className={clsx('flex h-7 w-7 items-center justify-center rounded-full', active ? 'text-coral-500' : 'text-ink-500')}>
+              <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
             </span>
             {label}
           </Link>
@@ -236,10 +236,10 @@ export function TopBar({
   className?: string;
 }) {
   return (
-    <div className={clsx('mb-6 hidden items-center gap-4 lg:flex', className)}>
+    <div className={clsx('mb-4 hidden items-center gap-4 lg:flex', className)}>
       {search && (
         <form
-          className="neu-in flex h-12 max-w-[560px] flex-1 items-center gap-3 !rounded-2xl px-4 text-ink-400"
+          className="neu-in flex h-11 max-w-[520px] flex-1 items-center gap-3 !rounded-2xl px-4 text-ink-400"
           onSubmit={(e) => {
             e.preventDefault();
             search.onSubmit?.();
@@ -318,9 +318,9 @@ export function AppShell({ role, children }: { role: Role; children: React.React
 
   const tabs = MOBILE_TABS[role];
   return (
-    <div className="min-h-screen p-3 sm:p-4 lg:flex lg:gap-4">
+    <div className="min-h-screen p-3 sm:p-4 lg:flex lg:gap-3">
       {/* desktop sidebar */}
-      <aside className="neu sticky top-4 hidden h-[calc(100vh-2rem)] w-[236px] shrink-0 flex-col overflow-hidden px-4 py-6 lg:flex xl:w-[248px]">
+      <aside className="neu sticky top-4 hidden h-[calc(100vh-2rem)] w-[208px] shrink-0 flex-col overflow-hidden px-3 py-5 lg:flex xl:w-[216px]">
         <Swoosh />
         <Link href={homeFor(role)} className="relative px-2">
           <Logo />
@@ -364,7 +364,7 @@ export function AppShell({ role, children }: { role: Role; children: React.React
         </div>
       )}
 
-      <main className="neu min-w-0 flex-1 !rounded-[26px] p-4 pb-24 sm:p-6 lg:min-h-[calc(100vh-2rem)] lg:p-7 lg:pb-7">{children}</main>
+      <main className="neu min-w-0 flex-1 !rounded-[26px] p-4 pb-24 sm:p-6 lg:min-h-[calc(100vh-2rem)] lg:p-5 lg:pb-5">{children}</main>
 
       {tabs.length > 0 && (
         <nav className="neu fixed inset-x-3 bottom-3 z-40 flex justify-around !rounded-3xl px-2 py-2 lg:hidden" aria-label="Quick navigation">
