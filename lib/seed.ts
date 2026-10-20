@@ -6,7 +6,7 @@ import type {
 const AV = (n: string) => `/assets/avatars/${n}.png`;
 const PH = (n: string) => `/assets/photos/${n}.jpg`;
 
-export const DB_VERSION = 3;
+export const DB_VERSION = 4;
 export const TODAY_LABEL = 'Mon, 16 Mar 2025';
 
 // ------------------------------------------------------------------ users
@@ -263,13 +263,15 @@ jobs.find((j) => j.id === 'J1004')!.notes = 'Customer asked for a road test afte
 const it = (id: string, name: string, category: string, type: string, amount: number) => ({ id, name, category, type, amount });
 const estimates: Estimate[] = [
   { id: 'EST-1024', jobId: 'J1004', status: 'Awaiting Approval', sentHoursAgo: 4, why: 'Your brake pads are worn out and discs show deep scoring. Replacing them ensures safe driving.',
-    items: [it('i1', 'Brake Pad (Front)', 'Parts', 'Parts', 8500), it('i2', 'Brake Disc (Front)', 'Parts', 'Parts', 18000), it('i3', 'Labour - Brake Service', 'Labour', 'Labour', 4000), it('i4', 'Brake Fluid', 'Parts', 'Parts', 1200), it('i5', 'Consumables', 'Parts', 'Parts', 800)] },
+    items: [it('i1', 'Brake Pad (Front)', 'Parts', 'Parts', 8500), { ...it('i2', 'Brake Disc (Front)', 'Parts', 'Parts', 18000), qty: 2 }, it('i3', 'Labour - Brake Service', 'Labour', 'Labour', 4000), it('i4', 'Brake Fluid', 'Parts', 'Parts', 1200), it('i5', 'Consumables', 'Parts', 'Parts', 800)] },
   { id: 'EST-1025', jobId: 'J1005', status: 'Awaiting Approval', sentHoursAgo: 30, why: 'Routine service items found worn during diagnostics.',
     items: [it('i1', 'Engine Oil & Filter', 'Parts', 'Parts + Labour', 9500), it('i2', 'Air Filter', 'Parts', 'Parts', 4500), it('i3', 'Labour - General Service', 'Labour', 'Labour', 12000), it('i4', 'Consumables', 'Parts', 'Parts', 4000)] },
   { id: 'EST-1026', jobId: 'J1013', status: 'Awaiting Approval', sentHoursAgo: 26, why: 'AC compressor needs replacement for proper cooling.',
     items: [it('i1', 'AC Compressor', 'Parts', 'Parts', 21000), it('i2', 'Labour - AC Service', 'Labour', 'Labour', 9000), it('i3', 'Refrigerant', 'Parts', 'Parts', 5000)] },
   { id: 'EST-1027', jobId: 'J1014', status: 'Awaiting Approval', sentHoursAgo: 2, why: 'Paint protection film and detailing as requested.',
     items: [it('i1', 'PPF Wrap', 'Parts', 'Parts', 20500), it('i2', 'Labour - Detailing', 'Labour', 'Labour', 10000)] },
+  { id: 'EST-0987', jobId: 'J0987', status: 'Approved', sentHoursAgo: 150, why: 'Brake pads and discs were worn and needed replacement.',
+    items: [it('i1', 'Brake Pad (Front)', 'Parts', 'Parts', 6500), { ...it('i2', 'Brake Disc (Front)', 'Parts', 'Parts', 6000), qty: 2 }, it('i3', 'Labour - Brake Service', 'Labour', 'Labour', 2500), it('i4', 'Consumables', 'Parts', 'Parts', 593)] },
   { id: 'EST-1023', jobId: 'J1006', status: 'Approved', sentHoursAgo: 52, why: 'Standard service.', items: [it('i1', 'Engine Oil & Filter', 'Parts', 'Parts + Labour', 6500), it('i2', 'Labour', 'Labour', 'Labour', 3500)] },
   { id: 'EST-1022', jobId: 'J1010', status: 'Approved', sentHoursAgo: 60, why: 'Brake service.', items: [it('i1', 'Brake Pad (Front)', 'Parts', 'Parts', 7500), it('i2', 'Labour - Brake Service', 'Labour', 'Labour', 4000)] },
   { id: 'EST-1021', jobId: 'J1016', status: 'Rejected', sentHoursAgo: 90, why: 'Engine service.', items: [it('i1', 'Timing belt kit', 'Parts', 'Parts', 15000), it('i2', 'Labour', 'Labour', 'Labour', 8000)] },
@@ -277,8 +279,8 @@ const estimates: Estimate[] = [
 
 // ------------------------------------------------------------------ invoices
 const invoices: Invoice[] = [
-  { id: 'INV-1024', customerId: 'c-rahul-m', vehicleId: V.bmw3.id, jobId: 'J0987', amount: 18400, date: '12 Mar 2025', status: 'Paid' },
-  { id: 'INV-1023', customerId: 'c-rahul-m', vehicleId: V.audiRm.id, jobId: 'J0971', amount: 12600, date: '21 Jan 2025', status: 'Paid' },
+  { id: 'INV-1024', customerId: 'c-rahul-m', vehicleId: V.bmw3.id, jobId: 'J0987', amount: 18400, date: '12 Mar 2025', status: 'Paid', paidOn: '12 Mar 2025, 4:20 PM', method: 'UPI', txnId: 'UPI4821937560' },
+  { id: 'INV-1023', customerId: 'c-rahul-m', vehicleId: V.audiRm.id, jobId: 'J0971', amount: 12600, date: '21 Jan 2025', status: 'Paid', paidOn: '21 Jan 2025, 6:05 PM', method: 'Card', txnId: 'CRD7302914865' },
   { id: 'INV-1022', customerId: 'c-rahul-m', vehicleId: V.glcRm.id, jobId: 'J0925', amount: 24800, date: '05 Dec 2024', status: 'Paid' },
   { id: 'INV-1021', customerId: 'c-rahul-m', vehicleId: V.fortRm.id, jobId: 'J0860', amount: 15200, date: '18 Oct 2024', status: 'Paid' },
   { id: 'INV-1020', customerId: 'c-rahul-s', vehicleId: V.cityRs.id, amount: 9300, date: '10 Mar 2025', status: 'Paid' },

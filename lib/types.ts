@@ -138,6 +138,7 @@ export interface Job {
   completedOn?: string;
   completedInDays?: number;
   onHold?: boolean;
+  feedback?: { rating: number; comment: string; at: string };
 }
 
 export type EstimateStatus = 'Awaiting Approval' | 'Approved' | 'Rejected' | 'Draft';
@@ -148,6 +149,8 @@ export interface EstimateItem {
   category: string;
   type: string;
   amount: number;
+  /** quantity; unit price is amount / qty (defaults to 1) */
+  qty?: number;
 }
 
 export interface Estimate {
@@ -169,6 +172,9 @@ export interface Invoice {
   amount: number;
   date: string;
   status: InvoiceStatus;
+  paidOn?: string;
+  method?: string;
+  txnId?: string;
 }
 
 export interface Part {

@@ -47,6 +47,7 @@ export function JobStatusView({ job, detailsHref }: { job: Job; detailsHref?: st
             <p className="text-lg font-bold">{vehicleName(v)}</p>
             <p className="text-sm text-ink-500">{v?.reg}</p>
           </div>
+          <Link href="/customer/share" className="btn btn-neu h-10 px-4 text-sm">Share link</Link>
           {detailsHref && <Link href={detailsHref} className="btn btn-soft h-10 px-4 text-sm">Full job details</Link>}
         </div>
         <JobStepper job={job} className="mt-6" currentStyle="active" showTimes labels={['Inspection', 'Approval', 'In Repair', 'Quality Check', 'Ready for Delivery']} />

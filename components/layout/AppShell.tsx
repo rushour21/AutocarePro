@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import clsx from 'clsx';
 import {
   BarChart3, Bell, CalendarCheck, CalendarDays, Car, ChevronDown, ClipboardList, FileText, History, LayoutGrid, LifeBuoy, LogOut, Menu,
-  MessageSquare, Package, PackageSearch, Receipt, ScanSearch, Search, Settings, ShieldCheck, Plug, CreditCard, Warehouse, User as UserIcon, Users, UsersRound, Wrench, X,
+  MessageSquare, Package, PackageSearch, Receipt, ScanSearch, Search, Settings, ShieldCheck, Share2, Plug, CreditCard, Warehouse, User as UserIcon, Users, UsersRound, Wrench, X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { homeFor, logout, useSession } from '@/lib/auth';
@@ -80,6 +80,7 @@ const NAV: Record<Role, NavItem[]> = {
     { href: '/customer/invoices', label: 'Invoices', icon: Receipt },
     { href: '/customer/history', label: 'Service History', icon: History },
     { href: '/customer/notifications', label: 'Notifications', icon: Bell },
+    { href: '/customer/share', label: 'Share Link', icon: Share2 },
     { href: '/customer/support', label: 'Support', icon: LifeBuoy },
   ],
 };

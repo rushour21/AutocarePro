@@ -251,6 +251,9 @@ export function payInvoice(id: string) {
     const i = d.invoices.find((x) => x.id === id);
     if (!i || i.status === 'Paid') return;
     i.status = 'Paid';
+    i.paidOn = '16 Mar 2025, ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase();
+    i.method = 'UPI';
+    i.txnId = `UPI${Date.now().toString().slice(-10)}`;
     d.notifications.unshift({ id: uid('n'), customerId: i.customerId, kind: 'payment', title: 'Payment received', sub: `Invoice ${i.id}`, ago: 'Just now', read: false, href: '/customer/invoices' });
     const c = d.customers.find((x) => x.id === i.customerId);
     if (c) c.totalSpent += i.amount;
@@ -446,5 +449,24 @@ export function updateCustomerProfile(userId: string, patch: { name: string; ema
       c.email = patch.email;
       c.phone = patch.phone;
     }
+  });
+}
+
+export function submitFeedback(jobId: string, rating: number, comment: string) {
+  if (rating < 1 || rating > 5) return;
+  mutate((d) => {
+    const j = d.jobs.find((x) => x.id === jobId);
+    if (!j) return;
+    j.feedback = { rating, comment: comment.trim(), at: '16 Mar 2025' };
+    log(j, 'Customer', `Left ${rating}-star feedback${comment.trim() ? `: ${comment.trim()}` : ''}`);
+  });
+}
+
+export function requestEstimateChanges(estimateId: string, message: string, by: string) {
+  mutate((d) => {
+    const e = d.estimates.find((x) => x.id === estimateId);
+    const j = e && d.jobs.find((x) => x.id === e.jobId);
+    if (!e || !j) return;
+    log(j, by, `Note: Customer requested changes to ${e.id}${message.trim() ? ` — ${message.trim()}` : ''}`);
   });
 }
