@@ -22,7 +22,7 @@ npm run typecheck && npm run lint && npm run build
 
 - **Public:** `/` landing, `/login`
 - **Private share link `/track/[token]`** (no sign-in; token only, job numbers never resolve): overview (becomes “Your Vehicle is Ready!” when done), `live`, `details`, `inspection`, `photos`, `estimate` (approve / request changes), `timeline`, `invoice`, `report`, `feedback`
-- **Admin `/admin`:** dashboard + Workshop Live View, `jobs` (board / list / calendar), `jobs/[id]`, `jobs/[id]/inspection`, `jobs/new` (5-step wizard: pick a saved vehicle or add a new customer + vehicle → service → 2D check-in inspection where you tap the car to flag damaged parts → estimate → review), `calendar`, `customers`, `vehicles`, `estimates` (+`[id]`), `inventory`, `team`, `reports`, `settings` (+ workshop, notifications, integrations, subscription, security)
+- **Admin `/admin`:** the dashboard is the Workshop Live View filling the page (3D scene with floating KPIs, bay detail panel, schedule, bay status, active jobs and quick actions), `jobs` (board / list / calendar), `jobs/[id]`, `jobs/[id]/inspection`, `jobs/new` (5-step wizard: pick a saved vehicle or add a new customer + vehicle → service → 2D check-in inspection where you tap the car to flag damaged parts → estimate → review), `calendar`, `customers`, `vehicles`, `estimates` (+`[id]`), `inventory`, `team`, `reports`, `settings` (+ **workshop layout editor**, notifications, integrations, subscription, security)
 - **Technician `/employee`:** dashboard, `jobs`, `jobs/[id]` (+ `inspection`, `checklist`), `inspections`, `parts-request`, `calendar`, `messages`, `team`, `profile`
 - **Customer `/customer`:** dashboard, `vehicles`, `bookings` (+`new`), `estimates` (+`[id]`), `invoices`, `history`, `notifications`, `profile` (+ payment, security), `share` (copy / open / renew links), `support`, `jobs/[id]` (+ `details`)
 
@@ -31,8 +31,10 @@ npm run typecheck && npm run lint && npm run build
 - `lib/store.ts` — single persisted store (localStorage); every screen reads it, so a change in one portal shows up in the others.
 - `lib/access.ts` — role-scoped selectors (admins: all; technicians: assigned jobs; customers: own vehicles/jobs/estimates/invoices) and token lookup.
 - `lib/actions.ts` — all mutations. `middleware.ts` + `AppShell` guard each portal.
-- `components/ui` — shared components; `components/features/WorkshopLiveView` — interactive SVG floor plan (2D) and isometric preview (3D) driven by bay + job data.
-- Bays are configurable in Settings → Workshop.
+- `components/ui` — shared components.
+- **Workshop layout** (`lib/layout.ts`, `components/features/layout/*`): the physical workshop is stored in metres (plan, bays with type / size / rotation / status / equipment, fixtures). *Settings → Workshop* is a floor-plan editor (drag, resize handles, snap, zoom / pan, undo / redo, validation, safe delete) with a **draft → publish** step. Occupancy is never stored on a bay; it is derived from jobs.
+- **3D workshop** (`components/features/three/*`): a React Three Fiber scene generated from the published layout (floor, cutaway walls, bay markings, lifts, wash booth, shelving, reception, props, technicians, vehicles). It is lazy-loaded, falls back to the 2D plan without WebGL, and needs no network assets (textures are drawn on a canvas). Vehicles are stylised built-in models; drop licensed `.glb` files into `public/models` (see `public/models/README.md`) to replace them.
+- `components/features/WorkshopLiveView` — framed live view (2D / 3D) used by the technician and customer dashboards; `components/features/dashboard/LiveHero` — the admin dashboard.
 
 ## Share link
 
@@ -43,4 +45,4 @@ Demo jobs: BMW in repair (J1004) and a completed BMW (J0987) for the Ready / Rep
 
 ## Demo-build limits
 
-Mock data and sign-in live in the browser (no backend), so a share link only reflects data in the browser that created it; with a real API it works from any device. The “Live from Workshop” image is a still photo, and Time-lapse is not implemented. The cookie used by `middleware.ts` is unsigned and must be replaced by a real signed session. The 3D workshop is an isometric *preview* of the same data, not a true 3D scene. Landing-page statistics (4.9/5, 10K+, 5+ years) are placeholders copied from the design.
+Mock data and sign-in live in the browser (no backend), so a share link only reflects data in the browser that created it; with a real API it works from any device. The “Live from Workshop” image is a still photo, and Time-lapse is not implemented. The cookie used by `middleware.ts` is unsigned and must be replaced by a real signed session. The 3D workshop is generated from the saved layout and live jobs, but its cars and props are simple procedural models, not photoreal assets. "Live" means this browser last saw a change; real multi-user live updates need a backend (polling or WebSockets). Landing-page statistics (4.9/5, 10K+, 5+ years) are placeholders copied from the design.

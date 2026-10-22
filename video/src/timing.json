@@ -1,0 +1,83 @@
+{
+ "fps": 30,
+ "lines": [
+  {
+   "n": 1,
+   "text": "Every car. Every bay. Every promise.",
+   "start": 0.9,
+   "dur": 2.657,
+   "end": 3.557
+  },
+  {
+   "n": 2,
+   "text": "Running a workshop means keeping all of it in your head.",
+   "start": 4.107,
+   "dur": 3.087,
+   "end": 7.194
+  },
+  {
+   "n": 3,
+   "text": "AutoHub puts it all in front of you.",
+   "start": 7.744,
+   "dur": 2.17,
+   "end": 9.914
+  },
+  {
+   "n": 4,
+   "text": "This is Workshop Live View. Your entire floor, in three dimensions, in real time.",
+   "start": 11.014,
+   "dur": 5.42,
+   "end": 16.434
+  },
+  {
+   "n": 5,
+   "text": "Every vehicle. Every technician. Every stage. At a glance.",
+   "start": 16.984,
+   "dur": 3.811,
+   "end": 20.795
+  },
+  {
+   "n": 6,
+   "text": "Tap a bay to open the job. Move it forward in a single click.",
+   "start": 21.495,
+   "dur": 4.186,
+   "end": 25.68
+  },
+  {
+   "n": 7,
+   "text": "Your workshop is unique, so the layout is yours. Drag in a new bay, choose its equipment, and publish. It appears on the floor instantly.",
+   "start": 26.58,
+   "dur": 9.213,
+   "end": 35.793
+  },
+  {
+   "n": 8,
+   "text": "Technicians flag damage right on the car.",
+   "start": 36.593,
+   "dur": 2.814,
+   "end": 39.407
+  },
+  {
+   "n": 9,
+   "text": "And customers follow every step, and approve estimates, from a private link. No app. No login.",
+   "start": 40.207,
+   "dur": 6.482,
+   "end": 46.689
+  },
+  {
+   "n": 10,
+   "text": "One platform. Three portals. Total clarity.",
+   "start": 47.589,
+   "dur": 3.154,
+   "end": 50.743
+  },
+  {
+   "n": 11,
+   "text": "AutoHub. Every repair, under control.",
+   "start": 51.743,
+   "dur": 2.697,
+   "end": 54.439
+  }
+ ],
+ "total": 57.639
+}
