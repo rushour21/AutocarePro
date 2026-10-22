@@ -1,12 +1,12 @@
 import type {
-  Activity, Bay, CarKey, Channel, Customer, Db, Estimate, InspectionPoint, Invoice, Job, Message, Notification,
-  Part, PartRequest, Stage, User, Vehicle, Zone, Task, ChecklistItem, PointStatus,
+  Activity, Bay, BayState, BayType, CarKey, Channel, Customer, Db, Estimate, InspectionPoint, Invoice, Job, Message, Notification,
+  Fixture, Part, PartRequest, Stage, User, Vehicle, Zone, Task, ChecklistItem, PointStatus,
 } from './types';
 
 const AV = (n: string) => `/assets/avatars/${n}.png`;
 const PH = (n: string) => `/assets/photos/${n}.jpg`;
 
-export const DB_VERSION = 4;
+export const DB_VERSION = 5;
 export const TODAY_LABEL = 'Mon, 16 Mar 2025';
 
 // ------------------------------------------------------------------ users
@@ -336,14 +336,32 @@ const notifications: Notification[] = [
 ];
 
 // ------------------------------------------------------------------ garage + bays
-const bays: Bay[] = [1, 2, 3, 4, 5, 6, 7, 8].map((i) => ({
-  id: `bay-${i}`, name: `Bay ${i}`, x: 70 + ((i - 1) % 4) * 225, y: i <= 4 ? 70 : 340, w: 190, h: 190, lift: i <= 4,
+// 30 x 20 m workshop: two rows of 4.5 x 7 m bays with a 3 m drive aisle, parts storage and reception on the right
+const BAY_SPEC: [BayType, BayState, string[]][] = [
+  ['general', 'normal', ['two_post_lift', 'tool_cabinet']],
+  ['inspection', 'normal', ['two_post_lift', 'diagnostic_tools']],
+  ['diagnostics', 'normal', ['two_post_lift', 'diagnostic_tools']],
+  ['quality', 'normal', ['two_post_lift']],
+  ['tyre', 'normal', ['wheel_balancer', 'tyre_changer']],
+  ['detailing', 'reserved', ['tool_cabinet']],
+  ['general', 'maintenance', ['air_compressor']],
+  ['wash', 'normal', []],
+];
+const bays: Bay[] = BAY_SPEC.map(([type, state, equipment], k) => ({
+  id: `bay-${k + 1}`, name: `Bay ${k + 1}`, type, state, equipment, active: true, rot: 0 as const,
+  x: 1.5 + (k % 4) * 5, y: k < 4 ? 1.5 : 11.5, w: 4.5, l: 7,
 }));
+const fixtures: Fixture[] = [
+  { id: 'fx-parts', kind: 'parts', name: 'Parts Storage', x: 23.5, y: 1.5, w: 5.5, h: 7 },
+  { id: 'fx-reception', kind: 'reception', name: 'Reception', x: 23.5, y: 11.5, w: 5.5, h: 3 },
+  { id: 'fx-lounge', kind: 'lounge', name: 'Customer Lounge', x: 23.5, y: 15, w: 5.5, h: 4 },
+  { id: 'fx-entrance', kind: 'entrance', name: 'Entrance', x: 0, y: 8.5, w: 0.6, h: 3 },
+];
 
 export const createSeed = (): Db => ({
   version: DB_VERSION,
   today: TODAY_LABEL,
-  garage: { name: 'AutoHub Premium Car Care', address: 'Pune, Maharashtra, India', phone: '+91 98765 43210', email: 'support@autohub.com', currency: 'INR (₹)', dateFormat: 'DD MMM YYYY', timeZone: 'Asia/Kolkata', plan: { w: 1000, h: 600 }, bays },
+  garage: { name: 'AutoHub Premium Car Care', address: 'Pune, Maharashtra, India', phone: '+91 98765 43210', email: 'support@autohub.com', currency: 'INR (₹)', dateFormat: 'DD MMM YYYY', timeZone: 'Asia/Kolkata', plan: { w: 30, h: 20, wallH: 5, grid: 0.5 }, bays, fixtures, layoutVersion: 1 },
   users, customers, vehicles, jobs, estimates, invoices, inventory, partRequests,
   purchaseOrders: [
     { id: 'PO-2041', supplier: 'Bosch India', items: 'Brake Pad (Front) x20, Brake Disc (Front) x10', amount: 96000, status: 'Ordered', date: '14 Mar 2025' },

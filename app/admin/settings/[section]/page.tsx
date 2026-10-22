@@ -2,60 +2,17 @@
 
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
-import { CreditCard, Download, MessageCircle, Plus, RotateCcw, Trash2, Wallet } from 'lucide-react';
+import { CreditCard, Download, MessageCircle, RotateCcw, Wallet } from 'lucide-react';
 import { SettingsFrame } from '@/components/features/SettingsShell';
 import { NoAccess } from '@/components/features/NoAccess';
-import { WorkshopLiveView } from '@/components/features/WorkshopLiveView';
-import { Button, ConfirmDialog, Input, StatusBadge, Toggle, useToast } from '@/components/ui';
-import { resetDemo, saveGarage, setBays, setPref } from '@/lib/actions';
+import { LayoutStudio } from '@/components/features/layout/LayoutStudio';
+import { Button, ConfirmDialog, StatusBadge, Toggle, useToast } from '@/components/ui';
+import { resetDemo, setPref } from '@/lib/actions';
 import { useSession } from '@/lib/auth';
 import { getDb, useDb } from '@/lib/store';
-import type { Bay } from '@/lib/types';
-
-const COLS = 4;
-const layout = (bays: Bay[]): { bays: Bay[]; h: number } => {
-  const out = bays.map((b, i) => ({ ...b, x: 70 + (i % COLS) * 225, y: 70 + Math.floor(i / COLS) * 270, w: 190, h: 190 }));
-  return { bays: out, h: Math.max(600, 70 + Math.ceil(bays.length / COLS) * 270 + 20) };
-};
 
 function Workshop() {
-  const db = useDb();
-  const toast = useToast();
-  const bays = db.garage.bays;
-  const commit = (next: Bay[]) => {
-    const l = layout(next);
-    setBays(l.bays);
-    saveGarage({ plan: { w: db.garage.plan.w, h: l.h } });
-  };
-  return (
-    <SettingsFrame title="Workshop" wide>
-      <p className="mb-5 text-sm text-ink-500">Configure the service bays shown in Workshop Live View. Changes appear on the dashboard immediately.</p>
-      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-        <div>
-          <ul className="space-y-2.5">
-            {bays.map((b, i) => {
-              const busy = db.jobs.some((j) => j.bayId === b.id && j.stage !== 'delivered');
-              return (
-                <li key={b.id} className="neu-row flex items-center gap-2.5 px-3 py-2.5">
-                  <Input aria-label={`Bay ${i + 1} name`} value={b.name} onChange={(e) => commit(bays.map((x) => (x.id === b.id ? { ...x, name: e.target.value } : x)))} className="!h-9 flex-1" />
-                  <span className="text-[11px] text-ink-400">Lift</span>
-                  <Toggle label={`${b.name} has a lift`} checked={!!b.lift} onChange={(v) => commit(bays.map((x) => (x.id === b.id ? { ...x, lift: v } : x)))} />
-                  <button aria-label={`Remove ${b.name}`} title={busy ? 'Occupied — move the job first' : 'Remove bay'} disabled={busy} onClick={() => commit(bays.filter((x) => x.id !== b.id))} className="btn btn-neu h-9 w-9 !rounded-full text-bad">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          <Button className="mt-4 w-full" variant="blue" onClick={() => { commit([...bays, { id: `bay-${Date.now().toString(36)}`, name: `Bay ${bays.length + 1}`, x: 0, y: 0, w: 190, h: 190, lift: false }]); toast.show('Bay added'); }}>
-            <Plus className="h-4 w-4" /> Add bay
-          </Button>
-        </div>
-        <WorkshopLiveView mode="admin" defaultView="2d" hrefFor={(j) => `/admin/jobs/${j.id}`} />
-      </div>
-      {toast.node}
-    </SettingsFrame>
-  );
+  return <LayoutStudio />;
 }
 
 function Notifications() {

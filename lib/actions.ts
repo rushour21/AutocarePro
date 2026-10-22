@@ -1,7 +1,8 @@
 import { mutate, getDb } from './store';
 import { estimateTotals, STAGE_LABEL, STEP_INDEX } from './format';
-import type { Booking, Customer, Estimate, EstimateItem, Garage, InspectionPoint, Job, PartRequest, RequestStatus, Stage, TaskStatus, User, Vehicle, Invoice } from './types';
+import type { Booking, Customer, Estimate, EstimateItem, Garage, InspectionPoint, Job, PartRequest, RequestStatus, Stage, TaskStatus, User, Vehicle, Invoice, WorkshopLayout } from './types';
 import { createSeed } from './seed';
+import { cloneLayout, validateLayout } from './layout';
 
 const uid = (p: string) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const NOW = () => '16 Mar 2025, ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase();
@@ -56,8 +57,13 @@ export function setJobStage(jobId: string, stage: Stage, by = 'Team') {
 export function assignBay(jobId: string, bayId: string | undefined): { ok: boolean; error?: string } {
   const d = getDb();
   if (bayId) {
+    const bay = d.garage.bays.find((b) => b.id === bayId);
+    if (!bay) return { ok: false, error: 'That bay no longer exists.' };
     const occupant = d.jobs.find((j) => j.bayId === bayId && j.id !== jobId && j.stage !== 'delivered');
-    if (occupant) return { ok: false, error: `${bayId.replace('bay-', 'Bay ')} is already occupied by #${occupant.id}.` };
+    if (occupant) return { ok: false, error: `${bay.name} is already occupied by #${occupant.id}.` };
+    const current = d.jobs.find((j) => j.id === jobId)?.bayId === bayId;
+    if (!current && !bay.active) return { ok: false, error: `${bay.name} is inactive and cannot take new jobs.` };
+    if (!current && bay.state === 'maintenance') return { ok: false, error: `${bay.name} is under maintenance.` };
   }
   mutate((x) => {
     const j = x.jobs.find((y) => y.id === jobId);
@@ -438,14 +444,43 @@ export function addNote(jobId: string, by: string, text: string) {
   });
 }
 
-export function setBays(bays: Garage['bays']) {
+// ------------------------------------------------------------------ workshop layout (draft -> publish)
+export function saveLayoutDraft(layout: WorkshopLayout) {
   mutate((d) => {
-    d.garage.bays = bays;
-    const ids = new Set(bays.map((b) => b.id));
-    d.jobs.forEach((j) => {
-      if (j.bayId && !ids.has(j.bayId)) j.bayId = undefined;
-    });
+    d.garage.draft = { ...cloneLayout(layout), baseVersion: d.garage.layoutVersion, savedAt: new Date().toISOString() };
   });
+}
+
+export function discardLayoutDraft() {
+  mutate((d) => {
+    delete d.garage.draft;
+  });
+}
+
+/**
+ * Publish a layout to the live dashboard. Everything is re-validated here (not only in the editor), and a bay
+ * that still has an active job cannot be removed.
+ */
+export function publishLayout(layout: WorkshopLayout): { ok: boolean; errors: string[] } {
+  const d = getDb();
+  const errors = validateLayout(layout).filter((i) => i.level === 'error').map((i) => i.message);
+  const keep = new Set(layout.bays.map((b) => b.id));
+  d.garage.bays.forEach((b) => {
+    const j = d.jobs.find((x) => x.bayId === b.id && x.stage !== 'delivered');
+    if (j && !keep.has(b.id)) errors.push(`${b.name} still has job #${j.id}. Move the job first, or deactivate the bay instead of removing it.`);
+  });
+  if (d.garage.draft && d.garage.draft.baseVersion !== d.garage.layoutVersion) errors.push('The published layout changed since this draft was started. Discard the draft and start again.');
+  if (errors.length) return { ok: false, errors };
+  mutate((x) => {
+    const l = cloneLayout(layout);
+    x.garage.plan = l.plan;
+    x.garage.bays = l.bays;
+    x.garage.fixtures = l.fixtures;
+    x.garage.layoutVersion += 1;
+    x.garage.publishedAt = new Date().toISOString();
+    delete x.garage.draft;
+  });
+  return { ok: true, errors: [] };
 }
 
 export function setOnHold(jobId: string, onHold: boolean, by: string) {

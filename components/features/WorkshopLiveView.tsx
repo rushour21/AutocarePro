@@ -6,7 +6,11 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { assignBay, setJobStage } from '@/lib/actions';
 import { vehicleOf, userOf, STAGE_LABEL, STAGE_TONE, vehicleName } from '@/lib/format';
 import { useDb } from '@/lib/store';
-import type { Bay, Job, Stage } from '@/lib/types';
+import { bayRect } from '@/lib/layout';
+import type { Bay as MetricBay, Job, Stage } from '@/lib/types';
+
+/** TEMPORARY: the legacy SVG scene works in 1000 x 600 plan units; the stored layout is in metres. */
+type Bay = MetricBay & { h: number; lift: boolean };
 import { Button, EmptyState, Modal, Select, StatusBadge, VehicleImage, useToast } from '@/components/ui';
 import { CAR_COLOR, CarTopShapes, shade } from './CarTop';
 
@@ -110,8 +114,12 @@ export function WorkshopLiveView({ mode, variant = 'full', userId, highlightJobI
   const [openBay, setOpenBay] = useState<Bay | null>(null);
   const [full, setFull] = useState(false);
   const [pick, setPick] = useState('');
-  const bays = db.garage.bays;
-  const plan = db.garage.plan;
+  const U = Math.min(1000 / db.garage.plan.w, 600 / db.garage.plan.h);
+  const bays: Bay[] = useMemo(
+    () => db.garage.bays.map((b) => { const r = bayRect(b); return { ...b, x: r.x * U, y: r.y * U, w: r.w * U, h: r.h * U, lift: b.equipment.includes('two_post_lift') }; }),
+    [db.garage.bays, U],
+  );
+  const plan = { w: db.garage.plan.w * U, h: db.garage.plan.h * U };
 
   useEffect(() => {
     const on = () => setFull(!!document.fullscreenElement);

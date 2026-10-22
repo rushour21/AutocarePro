@@ -244,15 +244,55 @@ export interface Booking {
   notes?: string;
 }
 
+export type BayType = 'general' | 'inspection' | 'diagnostics' | 'detailing' | 'tyre' | 'quality' | 'wash';
+/** Physical condition of a bay. Occupancy is never stored: it is derived from jobs that point at the bay. */
+export type BayState = 'normal' | 'maintenance' | 'reserved';
+
 export interface Bay {
   id: string;
   name: string;
-  /** floor-plan rectangle in a 1000 x 600 plan */
+  type: BayType;
+  /** all geometry is in metres; x/y is the top-left corner of the footprint on the workshop plan */
+  x: number;
+  y: number;
+  /** across the vehicle */
+  w: number;
+  /** along the vehicle */
+  l: number;
+  /** 0: the vehicle points along the plan's Y axis, 90: along X (the footprint is rotated) */
+  rot: 0 | 90;
+  /** inactive bays cannot receive new jobs */
+  active: boolean;
+  state: BayState;
+  equipment: string[];
+  notes?: string;
+}
+
+export type FixtureKind = 'reception' | 'parts' | 'lounge' | 'cabinet' | 'entrance';
+
+/** Fixed furniture and structure: drawn on the plan and generated in 3D, but not assignable. */
+export interface Fixture {
+  id: string;
+  kind: FixtureKind;
+  name: string;
   x: number;
   y: number;
   w: number;
   h: number;
-  lift?: boolean;
+}
+
+export interface LayoutPlan {
+  /** workshop width (X) and length (Y) in metres */
+  w: number;
+  h: number;
+  wallH: number;
+  grid: number;
+}
+
+export interface WorkshopLayout {
+  plan: LayoutPlan;
+  bays: Bay[];
+  fixtures: Fixture[];
 }
 
 export interface Garage {
@@ -263,8 +303,14 @@ export interface Garage {
   currency: string;
   dateFormat: string;
   timeZone: string;
-  plan: { w: number; h: number };
+  /** the published layout: what Workshop Live View and the dashboard render */
+  plan: LayoutPlan;
   bays: Bay[];
+  fixtures: Fixture[];
+  layoutVersion: number;
+  publishedAt?: string;
+  /** unpublished edits from the Workshop Layout editor */
+  draft?: WorkshopLayout & { baseVersion: number; savedAt: string };
 }
 
 export interface PurchaseOrder {
