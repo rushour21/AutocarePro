@@ -13,14 +13,20 @@ const listeners = new Set<() => void>();
 
 const emit = () => listeners.forEach((l) => l());
 
+/** Stored data (this tab's earlier session, or another tab's write) is only trusted when it matches the current schema. */
+function isDb(x: unknown): x is Db {
+  const d = x as Partial<Db> | null;
+  return !!d && d.version === DB_VERSION && Object.keys(SERVER_SNAPSHOT).every((k) => Array.isArray((SERVER_SNAPSHOT as unknown as Record<string, unknown>)[k]) ? Array.isArray((d as Record<string, unknown>)[k]) : true);
+}
+
 function load() {
   if (loaded || typeof window === 'undefined') return;
   loaded = true;
   try {
     const raw = window.localStorage.getItem(KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as Db;
-      if (parsed.version === DB_VERSION) {
+      const parsed: unknown = JSON.parse(raw);
+      if (isDb(parsed)) {
         db = parsed;
         emit();
       }
@@ -44,8 +50,11 @@ function subscribe(l: () => void) {
   const onStorage = (e: StorageEvent) => {
     if (e.key === KEY && e.newValue) {
       try {
-        db = JSON.parse(e.newValue) as Db;
-        emit();
+        const next: unknown = JSON.parse(e.newValue);
+        if (isDb(next)) {
+          db = next;
+          emit();
+        }
       } catch {
         /* ignore */
       }
