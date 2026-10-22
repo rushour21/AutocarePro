@@ -243,7 +243,7 @@ export const FloorPlan = forwardRef<FloorPlanHandle, Props>(function FloorPlan(
     const muted = !b.active;
     const col = muted ? '#9b968e' : t.color;
     const dashed = !b.active || b.state !== 'normal';
-    const label = `${b.name}, ${t.label}${occ ? `, ${occ.title}` : ''}${!b.active ? ', inactive' : b.state !== 'normal' ? `, ${b.state}` : ''}`;
+    const label = `${b.name}: ${occ ? occ.title : 'empty'}, ${t.label}${!b.active ? ', inactive' : b.state !== 'normal' ? `, ${b.state}` : ''}`;
     const rotated = b.rot === 90;
     // the vehicle's length runs along the bay length; shapes have the nose at the bottom
     const cxm = r.x + r.w / 2, cym = r.y + r.h / 2;

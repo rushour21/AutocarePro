@@ -6,13 +6,14 @@ import { CreditCard, Download, MessageCircle, RotateCcw, Wallet } from 'lucide-r
 import { SettingsFrame } from '@/components/features/SettingsShell';
 import { NoAccess } from '@/components/features/NoAccess';
 import { LayoutStudio } from '@/components/features/layout/LayoutStudio';
+import { Workshop3DPreview } from '@/components/features/layout/Workshop3DPreview';
 import { Button, ConfirmDialog, StatusBadge, Toggle, useToast } from '@/components/ui';
 import { resetDemo, setPref } from '@/lib/actions';
 import { useSession } from '@/lib/auth';
 import { getDb, useDb } from '@/lib/store';
 
 function Workshop() {
-  return <LayoutStudio />;
+  return <LayoutStudio preview={(layout, selectedId, onSelect) => <Workshop3DPreview layout={layout} selectedId={selectedId} onSelect={onSelect} />} />;
 }
 
 function Notifications() {
