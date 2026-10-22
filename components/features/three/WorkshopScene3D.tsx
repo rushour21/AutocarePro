@@ -167,9 +167,14 @@ function Projector({ items, els }: { items: LabelItem[]; els: React.MutableRefOb
 }
 
 /* ------------------------------------------------------------------ one bay */
-function BayView({ bay, live, selected, hovered, onSelect, onHover }: {
+/** One bay: painted pad, markings, lift, equipment and (unless `bare`) the vehicle and technicians. Exported for the product film. */
+export function BayView({ bay, live, selected, hovered, onSelect, onHover, liftRaise, bare }: {
   bay: Bay;
   live?: BayLive;
+  /** 0..1 lift height override (animation) */
+  liftRaise?: number;
+  /** draw only the bay itself; the caller places the vehicle */
+  bare?: boolean;
   selected: boolean;
   hovered: boolean;
   onSelect: (id: string) => void;
@@ -230,14 +235,14 @@ function BayView({ bay, live, selected, hovered, onSelect, onHover }: {
         </mesh>
 
         {bay.type === 'wash' && <WashBooth w={bay.w} l={bay.l} />}
-        {lift && <Lift w={bay.w} raised={raised} />}
+        {lift && <Lift w={bay.w} raised={raised} raise={liftRaise} />}
         <BayEquipment equipment={bay.equipment} w={bay.w} l={bay.l} />
-        {live && (
+        {live && !bare && (
           <group position={[0, raised ? 0.95 : 0.06, 0]}>
             <Car3D carKey={live.carKey} dim={muted} />
           </group>
         )}
-        {live && (live.stage === 'in_repair' || live.stage === 'diagnostics' || live.stage === 'inspection') && (
+        {live && !bare && (live.stage === 'in_repair' || live.stage === 'diagnostics' || live.stage === 'inspection') && (
           <>
             <Technician position={[bay.w / 2 - 1.0, 0.06, bay.l / 2 - 1.5]} rotation={-Math.PI / 2 - 0.3} stoop={0.12} />
             {live.stage === 'in_repair' && <Technician position={[-(bay.w / 2 - 1.0), 0.06, 0.4]} rotation={Math.PI / 2 + 0.2} shirt="#c0392b" />}

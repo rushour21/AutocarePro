@@ -15,9 +15,10 @@ const rnd = (seed: number) => {
 };
 
 /* ------------------------------------------------------------------ per-bay equipment (bay-local frame, Z along the vehicle) */
-export function Lift({ w, raised }: { w: number; raised: boolean }) {
+/** `raise` (0..1) overrides `raised` so the lift height can be animated (used by the product film) */
+export function Lift({ w, raised, raise }: { w: number; raised: boolean; raise?: number }) {
   const x = w / 2 - 0.5;
-  const arm = raised ? 0.95 : 0.16;
+  const arm = raise !== undefined ? 0.16 + 0.79 * raise : raised ? 0.95 : 0.16;
   return (
     <group>
       {[-1, 1].map((s) => (

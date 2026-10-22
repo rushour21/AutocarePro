@@ -34,6 +34,11 @@ export function floorTexture() {
     c.stroke();
   });
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  // explicit trilinear mipmaps: the speckled tile must average out when the floor is far away, in every renderer
+  t.generateMipmaps = true;
+  t.minFilter = THREE.LinearMipmapLinearFilter;
+  t.magFilter = THREE.LinearFilter;
+  t.anisotropy = 4;
   return t;
 }
 

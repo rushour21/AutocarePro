@@ -49,11 +49,12 @@ export function Floor({ plan }: { plan: LayoutPlan }) {
         <meshStandardMaterial color="#e6ebf2" roughness={0.95} />
       </mesh>
       {/* slab edge */}
-      <mesh position={[plan.w / 2, -0.25, plan.h / 2]} receiveShadow>
+      {/* slab top sits just below the floor plane so the two never z-fight */}
+      <mesh position={[plan.w / 2, -0.27, plan.h / 2]} receiveShadow>
         <boxGeometry args={[plan.w + 0.6, 0.5, plan.h + 0.6]} />
         <meshStandardMaterial color="#59616d" roughness={0.8} />
       </mesh>
-      <mesh position={[plan.w / 2, 0.0, plan.h / 2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <mesh position={[plan.w / 2, 0.004, plan.h / 2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[plan.w, plan.h]} />
         <meshStandardMaterial map={tex} roughness={0.85} metalness={0.02} />
       </mesh>

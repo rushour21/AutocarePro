@@ -1,0 +1,83 @@
+{
+ "hook": {
+  "w1": 0.95,
+  "w2": 1.85,
+  "w3": 2.75,
+  "chaos": 4.15,
+  "suck": 6.5,
+  "flash": 7.3
+ },
+ "logo": {
+  "in": 7.35,
+  "draw": 7.55,
+  "word": 8.35,
+  "tag": 9.2,
+  "dive": 10.3
+ },
+ "reveal": {
+  "start": 10.7,
+  "floor": 10.9,
+  "walls": 11.7,
+  "pads": 12.6,
+  "fixtures": 13.5,
+  "cars": 14.2,
+  "carGap": 0.42,
+  "techs": 16.1,
+  "chips": 16.3,
+  "ui": 16.9,
+  "count": 17.5,
+  "ring": [
+   17.0,
+   17.95,
+   18.8,
+   19.65
+  ]
+ },
+ "interact": {
+  "cursorIn": 21.1,
+  "clickBay2": 22.5,
+  "menu": 23.55,
+  "pick": 24.55,
+  "oneClick": 25.0,
+  "end": 26.3
+ },
+ "studio": {
+  "start": 26.2,
+  "title": 26.5,
+  "hi": 27.3,
+  "addBay": 29.55,
+  "drag": 30.15,
+  "props": 31.2,
+  "equip": 32.1,
+  "publish": 33.1,
+  "toast": 33.35,
+  "to3d": 33.9,
+  "end": 36.4
+ },
+ "tech": {
+  "start": 36.3,
+  "scan": 36.8,
+  "tap": 37.55,
+  "tip": 37.75,
+  "end": 40.1
+ },
+ "cust": {
+  "start": 40.0,
+  "phone": 40.25,
+  "timeline": 41.6,
+  "estimate": 42.45,
+  "approve": 43.8,
+  "link": 44.35,
+  "noapp": 45.85,
+  "nologin": 46.35,
+  "end": 47.6
+ },
+ "close": {
+  "start": 47.5,
+  "devices": 47.9,
+  "merge": 50.6,
+  "logo": 51.7,
+  "tag": 52.9,
+  "end": 57.64
+ }
+}
