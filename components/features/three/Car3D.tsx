@@ -1,10 +1,13 @@
 'use client';
 
-import { RoundedBox } from '@react-three/drei';
-import { useMemo } from 'react';
+import { RoundedBox, useGLTF } from '@react-three/drei';
+import { Component, Suspense, useMemo } from 'react';
+import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import { CAR_COLOR } from '@/components/features/CarTop';
 import type { CarKey } from '@/lib/types';
+import { useCarModel } from './models';
+import type { ModelEntry } from './models';
 import { blobTexture } from './textures';
 
 type Style = 'sedan' | 'suv' | 'large';
@@ -56,7 +59,7 @@ export const carSize = (k: CarKey) => ({ L: DIM[STYLE[k]].L, W: DIM[STYLE[k]].W 
  * A stylised vehicle built from primitives. Local frame: nose points to +Z, width along X, up is +Y.
  * It is deliberately generic: a licensed .glb model can replace this component without touching the scene.
  */
-export function Car3D({ carKey, dim }: { carKey: CarKey; dim?: boolean }) {
+function ProceduralCar({ carKey, dim }: { carKey: CarKey; dim?: boolean }) {
   const d = DIM[STYLE[carKey]];
   const paint = CAR_COLOR[carKey];
   const blob = useMemo(() => blobTexture(), []);
@@ -124,6 +127,68 @@ export function Car3D({ carKey, dim }: { carKey: CarKey; dim?: boolean }) {
         </mesh>
       ))}
     </group>
+  );
+}
+
+/** a licensed .glb from public/models, fitted to a real car's length and sat on the floor */
+function ModelCar({ entry, carKey, dim }: { entry: ModelEntry; carKey: CarKey; dim?: boolean }) {
+  const gltf = useGLTF(entry.url);
+  const fit = useMemo(() => {
+    const root = gltf.scene.clone(true);
+    root.rotation.y = ((entry.rotY ?? 0) * Math.PI) / 180;
+    root.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(root);
+    const size = box.getSize(new THREE.Vector3());
+    const k = (carSize(carKey).L / Math.max(size.z, 0.001)) * (entry.scale ?? 1);
+    const c = box.getCenter(new THREE.Vector3());
+    root.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh) {
+        m.castShadow = true;
+        m.receiveShadow = true;
+      }
+    });
+    return { root, k, offset: new THREE.Vector3(-c.x * k, -box.min.y * k, -c.z * k) };
+  }, [gltf, entry, carKey]);
+  const blob = useMemo(() => blobTexture(), []);
+  const { L, W } = carSize(carKey);
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.011, 0]}>
+        <planeGeometry args={[W * 1.9, L * 1.25]} />
+        <meshBasicMaterial map={blob} transparent depthWrite={false} opacity={dim ? 0.5 : 0.9} />
+      </mesh>
+      <group position={fit.offset} scale={fit.k}>
+        <primitive object={fit.root} />
+      </group>
+    </group>
+  );
+}
+
+class ModelBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(e: unknown) {
+    console.warn('3D vehicle model could not be loaded, using the built-in car', e);
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
+
+/** The vehicle in a bay: the manifest's .glb when there is one, otherwise the built-in stylised car. */
+export function Car3D({ carKey, dim }: { carKey: CarKey; dim?: boolean }) {
+  const entry = useCarModel(carKey);
+  const fallback = <ProceduralCar carKey={carKey} dim={dim} />;
+  if (!entry) return fallback;
+  return (
+    <ModelBoundary key={entry.url} fallback={fallback}>
+      <Suspense fallback={fallback}>
+        <ModelCar entry={entry} carKey={carKey} dim={dim} />
+      </Suspense>
+    </ModelBoundary>
   );
 }
 
