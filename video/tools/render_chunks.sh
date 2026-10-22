@@ -1,12 +1,11 @@
 #!/bin/bash
 # Renders the film in 5-second chunks (separate processes, stall watchdog + retry), then joins them losslessly.
 cd "$(dirname "$0")/.."
-TOTAL=${TOTAL:-1730}; CH=${CH:-150}; CONC=${CONC:-3}
-mkdir -p out/chunks; : > out/chunks.txt
-for ((s=0; s<TOTAL; s+=CH)); do
+TOTAL=${TOTAL:-1730}; CH=${CH:-150}; CONC=${CONC:-3}; START=${START:-0}
+mkdir -p out/chunks
+for ((s=START; s<TOTAL; s+=CH)); do
   e=$((s+CH-1)); [ $e -ge $TOTAL ] && e=$((TOTAL-1))
   f=out/chunks/c$(printf %05d $s).mp4
-  echo "file 'chunks/$(basename $f)'" >> out/chunks.txt
   [ -s $f ] && continue
   for try in 1 2 3; do
     echo "chunk $s-$e try $try"
@@ -24,4 +23,5 @@ for ((s=0; s<TOTAL; s+=CH)); do
   done
   [ -s $f ] || { echo "FAILED chunk $s"; exit 1; }
 done
+ls out/chunks | sort | sed "s/.*/file 'chunks\/&'/" > out/chunks.txt
 ffmpeg -y -loglevel error -f concat -safe 0 -i out/chunks.txt -c copy out/silent.mp4 && echo "JOINED"
