@@ -11,7 +11,7 @@ const want = process.argv.slice(2);
 const on = (r) => want.length === 0 || want.includes(r);
 const metaFile = `${OUT}/cards.json`;
 const meta = fs.existsSync(metaFile) ? JSON.parse(fs.readFileSync(metaFile, 'utf8')) : {};
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const DSF = 3;
 const PAD = 30;
 
@@ -144,6 +144,48 @@ if (on('r5')) await safe('r5', async () => {
   await safe('r5_recv', () => grab(page, card(page.getByTestId('receivables-header')), 'r5_recv'));
   await safe('r5_ins', () => grab(page, card(page.getByRole('heading', { name: 'By insurer' })), 'r5_ins'));
   await ctx.close();
+});
+
+/* ------------------------------------------------ video 6: the whole product */
+if (on('r6')) await safe('r6', async () => {
+  const { ctx, page } = await newCtx();
+  await as(ctx, page, 'admin', 'u-admin');
+  await go(page, '/admin', 3500);
+  await safe('r6_kpi', () => grab(page, page.locator('section[aria-label="Summary"]'), 'r6_kpi'));
+  await safe('r6_map', () => grab(page, page.locator('canvas').first().locator('xpath=ancestor::div[contains(@class,"neu") or contains(@class,"rounded")][1]'), 'r6_map'));
+  await go(page, '/admin/jobs/new');
+  await safe('r6_newjob', () => grab(page, card(page.getByRole('heading', { name: 'Recent Vehicles' }).or(page.getByText('Recent Vehicles', { exact: true }))), 'r6_newjob'));
+  await go(page, '/admin/reports', 1200);
+  await safe('r6_rev', () => grab(page, card(page.getByText('Revenue', { exact: true }).first()), 'r6_rev'));
+  await safe('r6_trend', () => grab(page, card(page.getByText('Revenue Trend')), 'r6_trend'));
+  await go(page, '/admin/calendar', 1200);
+  await safe('r6_cal', () => grab(page, page.getByText('Technician schedule for the workshop').locator('xpath=ancestor::main[1]/descendant::div[contains(@class,"neu")][last()]'), 'r6_cal'));
+  await go(page, '/admin/inventory', 1200);
+  await safe('r6_inv', () => grab(page, page.locator('table').first().locator('xpath=ancestor::div[contains(@class,"thin-scroll")][1]'), 'r6_inv'));
+  await go(page, '/admin/team', 1200);
+  await safe('r6_team', () => grab(page, page.locator('table').first().locator('xpath=ancestor::div[contains(@class,"thin-scroll")][1]'), 'r6_team'));
+  // customer link
+  await go(page, '/admin/jobs/J1018');
+  await page.getByRole('button', { name: /Copy tracking link/ }).click();
+  await page.waitForTimeout(250);
+  const tok = (await page.evaluate(() => navigator.clipboard.readText())).split('/track/')[1];
+  await go(page, `/track/${tok}`, 1500);
+  await safe('r6_track', () => grab(page, page.locator('h1').first().locator('xpath=ancestor::*[contains(@class,"neu")][1]'), 'r6_track'));
+  // technician inspection diagram
+  await as(ctx, page, 'technician', 'u-priya');
+  await go(page, '/employee/jobs/J1010/inspection', 1500);
+  await safe('r6_damage', () => grab(page, page.getByText('Minor Issue', { exact: true }).first().locator('xpath=ancestor::*[contains(@class,"neu")][1]'), 'r6_damage'));
+  await ctx.close();
+  // layout studio, desktop
+  const big = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+  await big.addCookies([{ name: 'ah_role', value: 'admin', url: B }, { name: 'ah_uid', value: 'u-admin', url: B }]);
+  const q = await big.newPage();
+  await q.goto(B + '/login', { waitUntil: 'domcontentloaded' });
+  await q.evaluate(() => localStorage.setItem('autohub.session', 'u-admin'));
+  await q.goto(B + '/admin/settings/workshop', { waitUntil: 'networkidle' });
+  await q.waitForTimeout(1500);
+  await safe('r6_studio', () => grab(q, q.locator('svg').filter({ hasText: 'Bay 1' }).first().locator('xpath=ancestor::*[contains(@class,"neu")][1]'), 'r6_studio'));
+  await big.close();
 });
 
 fs.writeFileSync(metaFile, JSON.stringify(meta, null, 1));
