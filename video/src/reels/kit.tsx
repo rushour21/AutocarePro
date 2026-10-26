@@ -6,6 +6,7 @@ import { Kinetic, type Word } from '../components/Kinetic';
 import { Phone } from '../components/Devices';
 import { C, FPS, clamp01, eio, eout, lerp, prog, sp, track } from '../theme';
 import meta from '../../public/reels/meta.json';
+import cards from '../../public/cards/cards.json';
 
 /** Instagram reel: 1080 x 1920. Keep text/UI inside y 250..1570 (top ~250 and bottom ~350 are covered by the app). */
 export const RW = 1080;
@@ -22,6 +23,15 @@ const K = SCREEN_W / 390;
 /** where the focused point of a screenshot sits inside the phone screen */
 const CX = SCREEN_W / 2;
 const CY = 500;
+
+interface Geo { k: number; cx: number; cy: number }
+const PHONE_GEO: Geo = { k: K, cx: CX, cy: CY };
+/** frameless card: the app screen shown directly, no device around it */
+export const CARD_W = 960;
+export const CARD_H = 1010;
+export const CARD_X = (RW - CARD_W) / 2;
+export const CARD_Y = 560;
+const CARD_GEO: Geo = { k: CARD_W / 390, cx: CARD_W / 2, cy: CARD_H / 2 };
 
 /** keyframe: [seconds, focus y in css px of the screenshot, zoom, focus x] */
 export type ViewKey = [number, number, number, number?];
@@ -42,7 +52,7 @@ function viewAt(frame: number, keys: ViewKey[]) {
   return { fx, fy, z };
 }
 
-function TapMark({ at, x, y }: { at: number; x: number; y: number }) {
+export function TapMark({ at, x, y, k = 1 }: { at: number; x: number; y: number; k?: number }) {
   const frame = useCurrentFrame();
   const t = frame / FPS - at;
   if (t < -0.4 || t > 0.7) return null;
@@ -50,13 +60,13 @@ function TapMark({ at, x, y }: { at: number; x: number; y: number }) {
   const ring = clamp01(t / 0.55);
   return (
     <>
-      {t > 0 && <div style={{ position: 'absolute', left: x - 40, top: y - 40, width: 80, height: 80, borderRadius: '50%', border: '4px solid rgba(242,106,46,0.9)', opacity: 1 - ring, transform: `scale(${0.3 + ring * 1.1})` }} />}
-      <div style={{ position: 'absolute', left: x - 17, top: y - 17, width: 34, height: 34, borderRadius: '50%', background: 'rgba(28,29,32,0.55)', boxShadow: '0 0 0 4px rgba(255,255,255,0.85), 0 6px 14px rgba(0,0,0,0.3)', opacity: t < 0 ? eio(press) : 1 - clamp01(t / 0.6), transform: `scale(${t < 0 ? 1.5 - 0.5 * eio(press) : 0.9})` }} />
+      {t > 0 && <div style={{ position: 'absolute', left: x - 40 * k, top: y - 40 * k, width: 80 * k, height: 80 * k, borderRadius: '50%', border: '4px solid rgba(242,106,46,0.9)', opacity: 1 - ring, transform: `scale(${0.3 + ring * 1.1})` }} />}
+      <div style={{ position: 'absolute', left: x - 17 * k, top: y - 17 * k, width: 34 * k, height: 34 * k, borderRadius: '50%', background: 'rgba(28,29,32,0.55)', boxShadow: '0 0 0 4px rgba(255,255,255,0.85), 0 6px 14px rgba(0,0,0,0.3)', opacity: t < 0 ? eio(press) : 1 - clamp01(t / 0.6), transform: `scale(${t < 0 ? 1.5 - 0.5 * eio(press) : 0.9})` }} />
     </>
   );
 }
 
-function ShotLayer({ layer }: { layer: Layer }) {
+function ShotLayer({ layer, geo = PHONE_GEO }: { layer: Layer; geo?: Geo }) {
   const frame = useCurrentFrame();
   const t = frame / FPS;
   const fade = 0.28;
@@ -64,9 +74,9 @@ function ShotLayer({ layer }: { layer: Layer }) {
   if (o <= 0) return null;
   const m = meta[layer.src];
   const { fx, fy, z } = viewAt(frame, layer.view);
-  const s = K * z;
+  const s = geo.k * z;
   return (
-    <div style={{ position: 'absolute', left: 0, top: 0, width: 390, height: m.h, transformOrigin: '0 0', transform: `translate(${CX - fx * s}px, ${CY - fy * s}px) scale(${s})`, opacity: o }}>
+    <div style={{ position: 'absolute', left: 0, top: 0, width: 390, height: m.h, transformOrigin: '0 0', transform: `translate(${geo.cx - fx * s}px, ${geo.cy - fy * s}px) scale(${s})`, opacity: o }}>
       <Img src={staticFile(`reels/${layer.src}.png`)} style={{ width: 390, height: m.h, display: 'block' }} />
       {(layer.taps ?? []).map((tp, i) => <TapMark key={i} at={tp.t} x={tp.x} y={tp.y} />)}
     </div>
@@ -85,6 +95,68 @@ export function PhoneRig({ enter, layers, leave, y = PHONE_Y, style }: { enter: 
       </Phone>
     </div>
   );
+}
+
+/** the app screen as a large rounded card (no phone frame) */
+export function ScreenRig({ enter, layers, leave, y = CARD_Y, style }: { enter: number; layers: Layer[]; leave?: number; y?: number; style?: CSSProperties }) {
+  const frame = useCurrentFrame();
+  const p = sp(frame, enter, { damping: 17, stiffness: 100 });
+  const out = leave === undefined ? 0 : eio(clamp01((frame / FPS - leave) / 0.5));
+  const dy = (1 - p) * 1400 + out * 1400;
+  return (
+    <div style={{ position: 'absolute', left: CARD_X, top: y, width: CARD_W, height: CARD_H, transform: `translateY(${dy}px) scale(${lerp(0.94, 1, p)})`, borderRadius: 48, overflow: 'hidden', background: '#f7efe5', boxShadow: '0 40px 100px rgba(40,25,10,0.34), 0 0 0 6px rgba(255,255,255,0.92)', ...style }}>
+      {layers.map((l, i) => <ShotLayer key={i} layer={l} geo={CARD_GEO} />)}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- pop-out UI cards */
+export type CardName = keyof typeof cards;
+export interface CardSpec {
+  name: CardName;
+  from: number;
+  to: number;
+  /** centre of the element in the 1080x1920 frame, and its scale (screen px per css px) */
+  cx: number;
+  cy: number;
+  s: number;
+  rot?: number;
+  dir?: 'up' | 'down' | 'left' | 'right';
+  /** crossfade in place (a state change) instead of flying in */
+  swap?: boolean;
+  /** modal sheets are clipped to a rounded card */
+  dialog?: boolean;
+  taps?: { t: number; key: string }[];
+}
+
+export function CardPop({ c }: { c: CardSpec }) {
+  const frame = useCurrentFrame();
+  const t = frame / FPS;
+  if (t < c.from - 0.03 || t > c.to + 0.45) return null;
+  const m = cards[c.name] as { w: number; h: number; pad: number; taps: Record<string, { x: number; y: number }> };
+  const s = c.s;
+  const W_ = m.w * s, H_ = m.h * s, pad = m.pad * s;
+  const p = c.swap ? 1 : sp(frame, c.from, { damping: 14, stiffness: 130 });
+  const fadeIn = clamp01((t - c.from) / (c.swap ? 0.22 : 0.16));
+  const q = eio(clamp01((t - (c.to - 0.28)) / 0.3));
+  const d = c.dir ?? 'up';
+  const off = (1 - p) * 760;
+  const tx = d === 'left' ? -off : d === 'right' ? off : 0;
+  const ty = d === 'up' ? off : d === 'down' ? -off : 0;
+  const rot = (c.rot ?? 0) * (c.swap ? 1 : lerp(2.2, 1, p));
+  const float = c.swap ? 0 : Math.sin(t * 1.3 + c.cx * 0.01) * 5;
+  const left = c.cx - W_ / 2, top = c.cy - H_ / 2;
+  const img = <Img src={staticFile(`cards/${c.name}.png`)} style={{ position: 'absolute', left: -pad, top: -pad, width: W_ + pad * 2, height: H_ + pad * 2, maxWidth: 'none' }} />;
+  return (
+    <div style={{ position: 'absolute', left, top, width: W_, height: H_, opacity: fadeIn * (1 - q), transform: `translate(${tx}px, ${ty + float + q * 36}px) scale(${lerp(0.86, 1, p) * (1 - q * 0.04)}) rotate(${rot}deg)`, filter: c.dialog ? undefined : 'drop-shadow(0 34px 38px rgba(40,25,10,0.26))' }}>
+      {c.dialog ? <div style={{ position: 'absolute', inset: 0, borderRadius: 24 * s, overflow: 'hidden', boxShadow: '0 40px 90px rgba(40,25,10,0.34), 0 0 0 5px rgba(255,255,255,0.9)' }}>{img}</div> : img}
+      {(c.taps ?? []).map((tp, i) => { const pt = m.taps[tp.key]; return pt ? <TapMark key={i} at={tp.t} x={pt.x * s} y={pt.y * s} k={1.25} /> : null; })}
+    </div>
+  );
+}
+
+export function Cards({ list }: { list: CardSpec[] }) {
+  return <>{list.map((c, i) => <CardPop key={i} c={c} />)}</>;
 }
 
 /* ---------------------------------------------------------------- captions */

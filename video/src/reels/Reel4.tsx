@@ -1,7 +1,6 @@
 import { useCurrentFrame } from 'remotion';
 import { Loader, PhoneOff } from 'lucide-react';
-import { C, Caps, FPS, Pill, PhoneRig, ReelStage, clamp01, eio, eout, lerp, sp, type CapSpec, type Layer } from './kit';
-import { TG } from './targets';
+import { C, Caps, FPS, Pill, Cards, ReelStage, clamp01, eio, eout, lerp, sp, type CapSpec, type CardSpec } from './kit';
 
 export const R4_DUR = 22.6;
 
@@ -33,17 +32,18 @@ function Stuck() {
 }
 
 const T = { tech: 5.5, est: 7.3, apr: 9.4, conf: 11.3, done: 12.5, pay: 14.0, paid: 15.6, fb: 16.7, star: 17.8, thanks: 18.9 };
-const layers: Layer[] = [
-  { src: 'r4_tech', from: T.tech, to: T.est + 0.2, view: [[T.tech, 330, 1.0], [T.tech + 1.0, 560, 1.3]] },
-  { src: 'r4_est_admin', from: T.est, to: T.apr + 0.2, view: [[T.est, 300, 1.1], [T.est + 0.8, 420, 1.3], [T.apr, 560, 1.3]] },
-  { src: 'r4_est', from: T.apr, to: T.conf + 0.2, view: [[T.apr, 330, 1.05], [T.apr + 0.9, 560, 1.15], [T.conf - 0.3, 650, 1.3, 195]], taps: [{ t: T.conf - 0.1, ...TG.r4_approve }] },
-  { src: 'r4_confirm', from: T.conf, to: T.done + 0.2, view: [[T.conf, 690, 1.15, 195]], taps: [{ t: T.done - 0.2, ...TG.r4_confirm_btn }] },
-  { src: 'r4_approved', from: T.done, to: T.pay + 0.2, view: [[T.done, 300, 1.2]] },
-  { src: 'r4_pay', from: T.pay, to: T.paid + 0.2, view: [[T.pay, 520, 1.1, 195], [T.paid - 0.5, 690, 1.15, 215]], taps: [{ t: T.paid - 0.3, ...TG.r4_paybtn }] },
-  { src: 'r4_paid', from: T.paid, to: T.fb + 0.2, view: [[T.paid, 600, 1.1, 195]] },
-  { src: 'r4_fb', from: T.fb, to: T.star + 0.2, view: [[T.fb, 260, 1.3]], taps: [{ t: T.star - 0.2, ...TG.r4_star5 }] },
-  { src: 'r4_fb_stars', from: T.star, to: T.thanks + 0.2, view: [[T.star, 260, 1.3]] },
-  { src: 'r4_fb_done', from: T.thanks, to: 20.8, view: [[T.thanks, 260, 1.3]] },
+const CARDS: CardSpec[] = [
+  { name: 'r4_tech', from: T.tech, to: T.est + 0.2, cx: 540, cy: 1060, s: 2.7, rot: -2 },
+  { name: 'r4_est', from: T.est, to: T.apr + 0.2, cx: 540, cy: 1070, s: 2.45, rot: 2, dir: 'right' },
+  { name: 'r4_chip_a', from: T.apr, to: 12.3, cx: 540, cy: 700, s: 4.0 },
+  { name: 'r4_btn', from: T.apr + 0.2, to: 13.0, cx: 540, cy: 1000, s: 2.7, taps: [{ t: T.conf - 0.1, key: 'appr' }] },
+  { name: 'r4_confirm', from: T.conf, to: 12.6, cx: 540, cy: 1300, s: 2.3, dialog: true, taps: [{ t: T.done - 0.3, key: 'ok' }] },
+  { name: 'r4_chip_b', from: 12.3, to: 14.0, cx: 540, cy: 700, s: 4.0, swap: true },
+  { name: 'r4_inv', from: T.pay, to: T.paid + 0.15, cx: 540, cy: 1060, s: 1.95, dialog: true, taps: [{ t: T.paid - 0.3, key: 'pay' }] },
+  { name: 'r4_inv_paid', from: T.paid, to: T.fb + 0.2, cx: 540, cy: 1060, s: 1.95, dialog: true, swap: true },
+  { name: 'r4_fb', from: T.fb, to: T.star + 0.15, cx: 540, cy: 1060, s: 2.5, taps: [{ t: T.star - 0.2, key: 'star5' }] },
+  { name: 'r4_fb_stars', from: T.star, to: T.thanks + 0.15, cx: 540, cy: 1060, s: 2.5, swap: true },
+  { name: 'r4_fb_done', from: T.thanks, to: 20.8, cx: 540, cy: 1020, s: 2.5, rot: -1 },
 ];
 
 const caps: CapSpec[] = [
@@ -61,11 +61,11 @@ export const Reel4 = () => (
   <ReelStage dur={R4_DUR} kicker="Faster approvals. Faster payments." sub="Built for Pune garages">
     <Stuck />
     <Caps caps={caps} />
-    <PhoneRig enter={4.8} layers={layers} />
-    <Pill at={T.tech + 0.6} to={T.est} x={560} y={600} tone="dark" size={34} rot={3}>+ Extra work</Pill>
-    <Pill at={T.est + 0.8} to={T.apr} x={60} y={600} tone="coral" size={34} rot={-3}>₹38,350 total</Pill>
-    <Pill at={T.done + 0.2} to={T.pay} x={600} y={600} tone="green" size={38} rot={3}>Approved ✓</Pill>
-    <Pill at={T.paid + 0.1} to={T.fb} x={600} y={600} tone="green" size={38} rot={3}>Paid ✓</Pill>
-    <Pill at={T.thanks + 0.1} to={20.7} x={60} y={600} tone="white" size={38} rot={-3}>★★★★★</Pill>
+    <Cards list={CARDS} />
+    <Pill at={T.tech + 0.6} to={T.est} x={560} y={1500} tone="dark" size={34} rot={3}>+ Extra work</Pill>
+    <Pill at={T.est + 0.8} to={T.apr} x={60} y={1500} tone="coral" size={34} rot={-3}>₹38,350 total</Pill>
+    <Pill at={T.done + 0.2} to={T.pay} x={600} y={1500} tone="green" size={38} rot={3}>Approved ✓</Pill>
+    <Pill at={T.paid + 0.1} to={T.fb} x={600} y={1500} tone="green" size={38} rot={3}>Paid ✓</Pill>
+    <Pill at={T.thanks + 0.1} to={20.7} x={60} y={1500} tone="white" size={38} rot={-3}>★★★★★</Pill>
   </ReelStage>
 );

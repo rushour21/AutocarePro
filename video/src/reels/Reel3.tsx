@@ -1,7 +1,6 @@
 import { useCurrentFrame } from 'remotion';
 import { Clock, PackageSearch, User, Wrench } from 'lucide-react';
-import { C, Caps, FPS, Pill, PhoneRig, ReelStage, clamp01, eio, eout, lerp, sp, type CapSpec, type Layer } from './kit';
-import { TG } from './targets';
+import { C, Caps, FPS, Pill, Cards, ReelStage, clamp01, eio, eout, lerp, sp, type CapSpec, type CardSpec } from './kit';
 
 export const R3_DUR = 18.6;
 
@@ -32,14 +31,15 @@ function Walk() {
   );
 }
 
-const layers: Layer[] = [
-  { src: 'r3_jobs', from: 5.5, to: 8.1, view: [[5.5, 330, 1.0], [6.4, 430, 1.2]], taps: [{ t: 7.1, ...TG.r3_continue }] },
-  { src: 'r3_job', from: 7.9, to: 9.6, view: [[7.9, 300, 1.05], [8.6, 215, 1.15, 195]], taps: [{ t: 8.9, ...TG.r3_stage }] },
-  { src: 'r3_status', from: 9.4, to: 10.6, view: [[9.4, 215, 1.15, 195]] },
-  { src: 'r3_parts', from: 10.4, to: 11.7, view: [[10.4, 380, 1.1], [10.9, 470, 1.25, 150]], taps: [{ t: 11.2, ...TG.r3_request }] },
-  { src: 'r3_modal', from: 11.5, to: 12.7, view: [[11.5, 640, 1.15, 215], [12.0, 700, 1.2, 215]], taps: [{ t: 12.2, ...TG.r3_send }] },
-  { src: 'r3_sent', from: 12.5, to: 13.9, view: [[12.5, 300, 1.2]] },
-  { src: 'r3_admin', from: 13.7, to: 16.6, view: [[13.7, 300, 1.2, 195], [16.5, 300, 1.3]] },
+const CARDS: CardSpec[] = [
+  { name: 'r3_job', from: 5.5, to: 7.95, cx: 540, cy: 1050, s: 2.7, rot: -2, taps: [{ t: 7.2, key: 'cont' }] },
+  { name: 'r3_title', from: 7.9, to: 10.6, cx: 540, cy: 780, s: 3.0, dir: 'left' },
+  { name: 'r3_stage_a', from: 8.0, to: 9.3, cx: 540, cy: 1000, s: 4.4, taps: [{ t: 8.9, key: 'sel' }] },
+  { name: 'r3_stage_b', from: 9.15, to: 10.6, cx: 540, cy: 1000, s: 4.4, swap: true },
+  { name: 'r3_part', from: 10.4, to: 13.0, cx: 380, cy: 1110, s: 4.2, rot: -3, dir: 'left', taps: [{ t: 11.2, key: 'req' }] },
+  { name: 'r3_modal', from: 11.5, to: 13.0, cx: 580, cy: 1220, s: 2.15, dialog: true, taps: [{ t: 12.2, key: 'send' }] },
+  { name: 'r3_banner', from: 13.7, to: 16.6, cx: 540, cy: 960, s: 2.8, taps: [{ t: 15.5, key: 'review' }] },
+  { name: 'r3_part', from: 14.1, to: 16.6, cx: 540, cy: 1330, s: 2.4, rot: 2, dir: 'up' },
 ];
 
 const caps: CapSpec[] = [
@@ -55,9 +55,9 @@ export const Reel3 = () => (
   <ReelStage dur={R3_DUR} kicker="Jobs, status & parts. From the phone." sub="Built for Pune garages">
     <Walk />
     <Caps caps={caps} />
-    <PhoneRig enter={4.9} layers={layers} />
-    <Pill at={9.7} to={10.9} x={560} y={600} tone="green" size={34} rot={3}>Quality Check ✓</Pill>
-    <Pill at={12.8} to={13.9} x={60} y={600} tone="coral" size={34} rot={-3}>Request sent</Pill>
-    <Pill at={14.0} to={16.6} x={600} y={600} tone="dark" size={34} rot={3}>2 requests waiting</Pill>
+    <Cards list={CARDS} />
+    <Pill at={9.7} to={10.9} x={560} y={1500} tone="green" size={34} rot={3}>Quality Check ✓</Pill>
+    <Pill at={12.8} to={13.9} x={60} y={1500} tone="coral" size={34} rot={-3}>Request sent</Pill>
+    <Pill at={14.0} to={16.6} x={600} y={1500} tone="dark" size={34} rot={3}>2 requests waiting</Pill>
   </ReelStage>
 );

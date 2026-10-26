@@ -1,7 +1,6 @@
 import { useCurrentFrame } from 'remotion';
 import { AlertTriangle, Clock, FileWarning, Users } from 'lucide-react';
-import { C, Caps, FPS, Pill, PhoneRig, ReelStage, clamp01, eio, eout, lerp, sp, type CapSpec, type Layer } from './kit';
-import { TG } from './targets';
+import { C, Caps, FPS, Pill, Cards, ReelStage, clamp01, eio, eout, lerp, sp, type CapSpec, type CardSpec } from './kit';
 
 export const R5_DUR = 26.6;
 
@@ -32,14 +31,17 @@ function Flashes() {
 }
 
 const T = { claim: 7.9, mark: 9.4, gen: 11.8, packLoad: 12.0, pack: 12.9, cust: 14.8, appr: 17.0, recv: 19.5 };
-const layers: Layer[] = [
-  { src: 'r5_claim', from: T.claim, to: T.mark + 0.15, view: [[T.claim, 330, 1.0], [T.claim + 0.9, 1400, 1.0], [T.claim + 1.4, 1560, 1.2, 195]], taps: [{ t: T.mark, ...TG.r5_mark }] },
-  { src: 'r5_docs_ok', from: T.mark, to: T.gen + 0.2, view: [[T.mark, 1560, 1.2, 195], [T.mark + 0.9, 2100, 1.05], [T.mark + 1.5, 2250, 1.05], [T.gen - 0.6, 520, 1.2, 195]], taps: [{ t: T.gen, ...TG.r5_gen }] },
-  { src: 'r5_pack_loading', from: T.packLoad, to: T.pack + 0.15, view: [[T.packLoad, 560, 1.15]] },
-  { src: 'r5_pack', from: T.pack, to: T.cust + 0.2, view: [[T.pack, 300, 1.12], [T.cust - 0.3, 420, 1.2]] },
-  { src: 'r5_cust', from: T.cust, to: T.appr + 0.15, view: [[T.cust, 330, 1.05], [T.cust + 0.9, 330, 1.25, 195], [T.appr - 0.3, 380, 1.3, 170]], taps: [{ t: T.appr - 0.1, ...TG.r5_approve }] },
-  { src: 'r5_cust_ok', from: T.appr, to: T.recv + 0.2, view: [[T.appr, 380, 1.3, 170]] },
-  { src: 'r5_recv', from: T.recv, to: 22.9, view: [[T.recv, 390, 1.2, 195], [T.recv + 1.6, 520, 1.2, 195], [22.7, 620, 1.2, 195]] },
+const CARDS: CardSpec[] = [
+  { name: 'r5_docs_a', from: T.claim, to: T.mark + 0.2, cx: 430, cy: 1060, s: 2.2, rot: -2, taps: [{ t: T.mark, key: 'mark' }] },
+  { name: 'r5_docs_b', from: T.mark + 0.1, to: 12.0, cx: 430, cy: 1060, s: 2.2, rot: -2, swap: true },
+  { name: 'r5_photos', from: 10.4, to: 12.0, cx: 700, cy: 1090, s: 1.85, rot: 3, dir: 'right' },
+  { name: 'r5_head', from: 11.8, to: 13.0, cx: 540, cy: 1050, s: 2.6, taps: [{ t: 11.95, key: 'gen' }] },
+  { name: 'r5_pack', from: T.pack, to: T.cust + 0.15, cx: 540, cy: 1080, s: 1.45, dialog: true },
+  { name: 'r5_split', from: T.cust, to: 16.4, cx: 540, cy: 1000, s: 3.0, rot: -2 },
+  { name: 'r5_cust_a', from: 16.2, to: T.appr + 0.15, cx: 540, cy: 1060, s: 2.6, taps: [{ t: T.appr - 0.1, key: 'appr' }] },
+  { name: 'r5_cust_b', from: T.appr, to: T.recv + 0.2, cx: 540, cy: 1060, s: 2.6, swap: true },
+  { name: 'r5_recv', from: T.recv, to: 21.3, cx: 540, cy: 960, s: 2.8, rot: 1 },
+  { name: 'r5_ins', from: 21.1, to: 22.95, cx: 540, cy: 1050, s: 2.7, rot: -1 },
 ];
 
 const caps: CapSpec[] = [
@@ -56,8 +58,9 @@ export const Reel5 = () => (
   <ReelStage dur={R5_DUR} kicker="Do you handle insurance jobs?" sub="Built for Pune garages">
     <Flashes />
     <Caps caps={caps} />
-    <PhoneRig enter={7.3} layers={layers} leave={24.5} />
-    <Pill at={T.mark + 0.3} to={T.gen - 0.4} x={560} y={600} tone="green" size={34} rot={3}>All documents ✓</Pill>
-    <Pill at={T.appr + 0.3} to={T.recv} x={560} y={600} tone="green" size={36} rot={3}>Approved ✓</Pill>
+    <Cards list={CARDS} />
+    <Pill at={12.05} to={12.9} x={300} y={1500} tone="dark" size={34}>Building the claim pack…</Pill>
+    <Pill at={T.mark + 0.3} to={T.gen - 0.4} x={560} y={1500} tone="green" size={34} rot={3}>All documents ✓</Pill>
+    <Pill at={T.appr + 0.3} to={T.recv} x={560} y={1500} tone="green" size={36} rot={3}>Approved ✓</Pill>
   </ReelStage>
 );
