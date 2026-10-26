@@ -32,14 +32,14 @@ function Flashes() {
 
 const T = { claim: 7.9, mark: 9.4, gen: 11.8, packLoad: 12.0, pack: 12.9, cust: 14.8, appr: 17.0, recv: 19.5 };
 const CARDS: CardSpec[] = [
-  { name: 'r5_docs_a', from: T.claim, to: T.mark + 0.2, cx: 430, cy: 1060, s: 2.2, rot: -2, taps: [{ t: T.mark, key: 'mark' }] },
-  { name: 'r5_docs_b', from: T.mark + 0.1, to: 12.0, cx: 430, cy: 1060, s: 2.2, rot: -2, swap: true },
-  { name: 'r5_photos', from: 10.4, to: 12.0, cx: 700, cy: 1090, s: 1.85, rot: 3, dir: 'right' },
-  { name: 'r5_head', from: 11.8, to: 13.0, cx: 540, cy: 1050, s: 2.6, taps: [{ t: 11.95, key: 'gen' }] },
+  { name: 'r5_docs_a', from: T.claim, to: T.mark + 0.2, cx: 430, cy: 1040, s: 2.0, rot: -2, taps: [{ t: T.mark, key: 'mark' }] },
+  { name: 'r5_docs_b', from: T.mark + 0.1, to: 12.0, cx: 430, cy: 1040, s: 2.0, rot: -2, swap: true },
+  { name: 'r5_photos', from: 10.4, to: 12.0, cx: 700, cy: 1070, s: 1.7, rot: 3, dir: 'right' },
+  { name: 'r5_head', from: 11.8, to: 13.0, cx: 540, cy: 1050, s: 2.5, taps: [{ t: 11.95, key: 'gen' }] },
   { name: 'r5_pack', from: T.pack, to: T.cust + 0.15, cx: 540, cy: 1080, s: 1.45, dialog: true },
   { name: 'r5_split', from: T.cust, to: 16.4, cx: 540, cy: 1000, s: 3.0, rot: -2 },
-  { name: 'r5_cust_a', from: 16.2, to: T.appr + 0.15, cx: 540, cy: 1060, s: 2.6, taps: [{ t: T.appr - 0.1, key: 'appr' }] },
-  { name: 'r5_cust_b', from: T.appr, to: T.recv + 0.2, cx: 540, cy: 1060, s: 2.6, swap: true },
+  { name: 'r5_cust_a', from: 16.2, to: T.appr + 0.15, cx: 540, cy: 1050, s: 2.45, taps: [{ t: T.appr - 0.1, key: 'appr' }] },
+  { name: 'r5_cust_b', from: T.appr, to: T.recv + 0.2, cx: 540, cy: 1050, s: 2.45, swap: true },
   { name: 'r5_recv', from: T.recv, to: 21.3, cx: 540, cy: 960, s: 2.8, rot: 1 },
   { name: 'r5_ins', from: 21.1, to: 22.95, cx: 540, cy: 1050, s: 2.7, rot: -1 },
 ];

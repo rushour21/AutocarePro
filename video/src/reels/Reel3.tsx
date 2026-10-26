@@ -45,7 +45,7 @@ const CARDS: CardSpec[] = [
 const caps: CapSpec[] = [
   { from: 0.95, to: 3.1, text: 'Your mechanics, without the *running around.*' },
   { from: 3.15, to: 5.3, text: 'Need a part. Walk. *Wait.*' },
-  { from: 5.6, to: 7.8, text: '*My Jobs,* on the phone.' },
+  { from: 5.6, to: 7.8, text: '*My Jobs,* in your pocket.' },
   { from: 7.9, to: 10.3, text: 'Update the *status.*' },
   { from: 10.4, to: 13.4, text: 'Request a *part.*' },
   { from: 13.6, to: 16.6, text: 'Store sees it *instantly.*' },

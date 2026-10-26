@@ -33,14 +33,14 @@ function Stuck() {
 
 const T = { tech: 5.5, est: 7.3, apr: 9.4, conf: 11.3, done: 12.5, pay: 14.0, paid: 15.6, fb: 16.7, star: 17.8, thanks: 18.9 };
 const CARDS: CardSpec[] = [
-  { name: 'r4_tech', from: T.tech, to: T.est + 0.2, cx: 540, cy: 1060, s: 2.7, rot: -2 },
-  { name: 'r4_est', from: T.est, to: T.apr + 0.2, cx: 540, cy: 1070, s: 2.45, rot: 2, dir: 'right' },
+  { name: 'r4_tech', from: T.tech, to: T.est + 0.2, cx: 540, cy: 1040, s: 2.6, rot: -2 },
+  { name: 'r4_est', from: T.est, to: T.apr + 0.2, cx: 540, cy: 1050, s: 2.15, rot: 2, dir: 'right' },
   { name: 'r4_chip_a', from: T.apr, to: 12.3, cx: 540, cy: 700, s: 4.0 },
   { name: 'r4_btn', from: T.apr + 0.2, to: 13.0, cx: 540, cy: 1000, s: 2.7, taps: [{ t: T.conf - 0.1, key: 'appr' }] },
   { name: 'r4_confirm', from: T.conf, to: 12.6, cx: 540, cy: 1300, s: 2.3, dialog: true, taps: [{ t: T.done - 0.3, key: 'ok' }] },
   { name: 'r4_chip_b', from: 12.3, to: 14.0, cx: 540, cy: 700, s: 4.0, swap: true },
-  { name: 'r4_inv', from: T.pay, to: T.paid + 0.15, cx: 540, cy: 1060, s: 1.95, dialog: true, taps: [{ t: T.paid - 0.3, key: 'pay' }] },
-  { name: 'r4_inv_paid', from: T.paid, to: T.fb + 0.2, cx: 540, cy: 1060, s: 1.95, dialog: true, swap: true },
+  { name: 'r4_inv', from: T.pay, to: T.paid + 0.15, cx: 540, cy: 1050, s: 1.8, dialog: true, taps: [{ t: T.paid - 0.3, key: 'pay' }] },
+  { name: 'r4_inv_paid', from: T.paid, to: T.fb + 0.2, cx: 540, cy: 1050, s: 1.8, dialog: true, swap: true },
   { name: 'r4_fb', from: T.fb, to: T.star + 0.15, cx: 540, cy: 1060, s: 2.5, taps: [{ t: T.star - 0.2, key: 'star5' }] },
   { name: 'r4_fb_stars', from: T.star, to: T.thanks + 0.15, cx: 540, cy: 1060, s: 2.5, swap: true },
   { name: 'r4_fb_done', from: T.thanks, to: 20.8, cx: 540, cy: 1020, s: 2.5, rot: -1 },
