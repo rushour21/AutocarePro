@@ -2,6 +2,8 @@ import { mutate, getDb } from './store';
 import { estimateTotals, STAGE_LABEL, STEP_INDEX } from './format';
 import type { Booking, Customer, Estimate, EstimateItem, Garage, InspectionPoint, Job, PartRequest, RequestStatus, Stage, TaskStatus, User, Vehicle, Invoice, WorkshopLayout } from './types';
 import { createSeed } from './seed';
+import { CLAIM_FLOW, INSURERS, TODAY_ISO, expectedFromInsurer, newDocs, newPhotos, nowIso, placeholderPhoto, splitOf } from './insurance';
+import type { Claim, ClaimDocKind, ClaimLine, ClaimStatus } from './types';
 import { cloneLayout, validateLayout } from './layout';
 
 const uid = (p: string) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -537,5 +539,161 @@ export function requestEstimateChanges(estimateId: string, message: string, by: 
     const j = e && d.jobs.find((x) => x.id === e.jobId);
     if (!e || !j) return;
     log(j, by, `Note: Customer requested changes to ${e.id}${message.trim() ? ` — ${message.trim()}` : ''}`);
+  });
+}
+
+
+// ------------------------------------------------------------------ insurance claims (front-end only: local state)
+const claimEvent = (c: Claim, by: string, text: string) => c.events.unshift({ id: uid('ce'), at: nowIso(), by, text });
+const rankOf = (s: ClaimStatus) => CLAIM_FLOW.indexOf(s);
+/** moves a claim forward only; a status never goes backwards by itself */
+const advance = (c: Claim, to: ClaimStatus) => {
+  if (rankOf(to) > rankOf(c.status)) c.status = to;
+};
+
+export function setJobInsurance(jobId: string, on: boolean, by = 'Team') {
+  mutate((d) => {
+    const j = d.jobs.find((x) => x.id === jobId);
+    if (!j) return;
+    j.isInsurance = on;
+    if (on && !j.claimId) {
+      const est = d.estimates.find((e) => e.jobId === jobId);
+      const n = Math.max(2400, ...d.claims.map((c) => Number(c.id.replace('CLM-', '')))) + 1;
+      const id = `CLM-${n}`;
+      const claim: Claim = {
+        id, jobId, type: 'Cashless', insurer: INSURERS[0], policyNo: '', claimNo: '', accidentDate: TODAY_ISO, surveyorName: '', surveyorPhone: '', status: 'Intimated', intimatedAt: nowIso(),
+        docs: newDocs(), photos: newPhotos(id), deductible: 1000, depreciationPct: 25, zeroDep: false, received: 0,
+        lines: (est?.items ?? []).map((it, i) => ({ id: `${id}-l${i + 1}`, name: it.name, kind: it.category === 'Parts' ? ('part' as const) : ('labour' as const), amount: it.amount, covered: true })),
+        events: [],
+      };
+      claimEvent(claim, by, 'Claim created from the job card');
+      d.claims.unshift(claim);
+      j.claimId = id;
+    }
+    log(j, by, on ? 'Marked as an insurance job' : 'Insurance job flag removed');
+  });
+}
+
+export function updateClaim(id: string, patch: Partial<Pick<Claim, 'type' | 'insurer' | 'policyNo' | 'claimNo' | 'accidentDate' | 'surveyorName' | 'surveyorPhone' | 'deductible' | 'depreciationPct' | 'zeroDep'>>, by = 'Team') {
+  mutate((d) => {
+    const c = d.claims.find((x) => x.id === id);
+    if (!c) return;
+    if (patch.surveyorName !== undefined && patch.surveyorName !== c.surveyorName && patch.surveyorName.trim()) {
+      claimEvent(c, by, `Surveyor set to ${patch.surveyorName.trim()}`);
+      if (!c.surveyorAllocatedAt) c.surveyorAllocatedAt = nowIso();
+    }
+    Object.assign(c, patch);
+  });
+}
+
+export function setClaimStatus(id: string, status: ClaimStatus, by = 'Team') {
+  mutate((d) => {
+    const c = d.claims.find((x) => x.id === id);
+    if (!c || c.status === status) return;
+    c.status = status;
+    claimEvent(c, by, `Status changed to ${status}`);
+  });
+}
+
+export function setDocUploaded(id: string, kind: ClaimDocKind, uploaded: boolean, by = 'Team') {
+  mutate((d) => {
+    const c = d.claims.find((x) => x.id === id);
+    const doc = c?.docs.find((x) => x.kind === kind);
+    if (!c || !doc || doc.uploaded === uploaded) return;
+    doc.uploaded = uploaded;
+    doc.uploadedAt = uploaded ? nowIso() : undefined;
+    claimEvent(c, by, uploaded ? `${doc.label} marked as uploaded` : `${doc.label} marked as missing`);
+    if (c.docs.some((x) => x.required && !x.uploaded)) advance(c, 'Docs Pending');
+    else if (c.lines.length) advance(c, 'Estimate Ready');
+  });
+}
+
+export function sendUploadLink(id: string, by = 'Team') {
+  mutate((d) => {
+    const c = d.claims.find((x) => x.id === id);
+    if (!c) return;
+    claimEvent(c, by, 'Document upload link sent to the customer on WhatsApp');
+    advance(c, 'Docs Pending');
+  });
+}
+
+export function setPhotoUploaded(id: string, photoId: string, uploaded: boolean) {
+  mutate((d) => {
+    const c = d.claims.find((x) => x.id === id);
+    const p = c?.photos.find((x) => x.id === photoId);
+    if (!p) return;
+    p.uploaded = uploaded;
+    p.src = uploaded ? placeholderPhoto(c!.photos.indexOf(p) + 3) : undefined;
+  });
+}
+
+export function toggleClaimLine(id: string, lineId: string) {
+  mutate((d) => {
+    const l = d.claims.find((x) => x.id === id)?.lines.find((x) => x.id === lineId);
+    if (l) l.covered = !l.covered;
+  });
+}
+
+export function addClaimLine(id: string, line: Omit<ClaimLine, 'id'>) {
+  mutate((d) => {
+    const c = d.claims.find((x) => x.id === id);
+    if (!c) return;
+    c.lines.push({ ...line, id: uid('cl') });
+    if (c.lines.length === 1 && !c.docs.some((x) => x.required && !x.uploaded)) advance(c, 'Estimate Ready');
+  });
+}
+
+export function removeClaimLine(id: string, lineId: string) {
+  mutate((d) => {
+    const c = d.claims.find((x) => x.id === id);
+    if (c) c.lines = c.lines.filter((l) => l.id !== lineId);
+  });
+}
+
+/** Mock claim pack: marks it generated and "sends" it to the surveyor. */
+export function generateClaimPack(id: string, by = 'Team') {
+  mutate((d) => {
+    const c = d.claims.find((x) => x.id === id);
+    if (!c) return;
+    c.packAt = nowIso();
+    if (!c.surveyorAllocatedAt) c.surveyorAllocatedAt = nowIso();
+    claimEvent(c, by, 'Claim pack generated and sent to the surveyor');
+    advance(c, 'Survey Scheduled');
+  });
+}
+
+/** Surveyor page (no login): remarks plus the approved amount move the claim to Approved. */
+export function surveyorSubmit(id: string, remarks: string, amount: number) {
+  mutate((d) => {
+    const c = d.claims.find((x) => x.id === id);
+    if (!c) return;
+    c.surveyorRemarks = remarks;
+    c.approvedAmount = amount;
+    c.reportAt = nowIso();
+    c.decisionAt = nowIso();
+    claimEvent(c, c.surveyorName || 'Surveyor', `Survey report submitted. Approved amount ${new Intl.NumberFormat('en-IN').format(amount)}`);
+    c.status = rankOf(c.status) < rankOf('Approved') ? 'Approved' : c.status;
+  });
+}
+
+export function approveCustomerShare(id: string, by = 'Customer') {
+  mutate((d) => {
+    const c = d.claims.find((x) => x.id === id);
+    if (!c || c.customerApprovedAt) return;
+    c.customerApprovedAt = nowIso();
+    claimEvent(c, by, `Customer approved their share of ₹${new Intl.NumberFormat('en-IN').format(splitOf(c).customer)}`);
+  });
+}
+
+/** Mock payment: records what the insurer paid; anything below the expected amount shows up as short-paid. */
+export function recordClaimPayment(id: string, amount: number, by = 'Team') {
+  mutate((d) => {
+    const c = d.claims.find((x) => x.id === id);
+    if (!c) return;
+    c.received += amount;
+    c.receivedOn = TODAY_ISO;
+    c.status = 'Settled';
+    const short = Math.max(0, expectedFromInsurer(c) - c.received);
+    claimEvent(c, by, `Payment of ₹${new Intl.NumberFormat('en-IN').format(amount)} received from ${c.insurer}${short ? `, short-paid by ₹${new Intl.NumberFormat('en-IN').format(short)}` : ''}`);
   });
 }

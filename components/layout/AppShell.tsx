@@ -57,6 +57,7 @@ const NAV: Record<Role, NavItem[]> = {
     { href: '/admin/customers', label: 'Customers', icon: Users },
     { href: '/admin/vehicles', label: 'Vehicles', icon: Car },
     { href: '/admin/estimates', label: 'Estimates', icon: FileText },
+    { href: '/admin/insurance', label: 'Insurance Claims', icon: ShieldCheck },
     { href: '/admin/inventory', label: 'Inventory', icon: Package },
     { href: '/admin/team', label: 'Team', icon: UsersRound },
     { href: '/admin/reports', label: 'Reports', icon: BarChart3 },
