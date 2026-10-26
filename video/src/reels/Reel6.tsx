@@ -83,7 +83,7 @@ function Closer() {
 }
 
 export const Reel6 = () => (
-  <ReelStage dur={R6_DUR} kicker="Every claim, under control" sub="Built for Pune garages">
+  <ReelStage dur={R6_DUR} kicker="Every claim, under control">
     <Juggle />
     <OneIntro />
     <Caps caps={CAPS} />

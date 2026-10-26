@@ -55,7 +55,7 @@ const caps: CapSpec[] = [
 ];
 
 export const Reel5 = () => (
-  <ReelStage dur={R5_DUR} kicker="Do you handle insurance jobs?" sub="Built for Pune garages">
+  <ReelStage dur={R5_DUR} kicker="Do you handle insurance jobs?">
     <Flashes />
     <Caps caps={caps} />
     <Cards list={CARDS} />

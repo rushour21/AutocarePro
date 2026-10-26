@@ -86,7 +86,7 @@ export const Reel1 = () => {
   const t = frame / FPS;
   const calls = Math.round(lerp(20, 0, eout(clamp01((t - 13.5) / 1.4))));
   return (
-    <ReelStage dur={R1_DUR} kicker="Stop answering “is it ready?”" cta="DM “DEMO”" sub="Built for Pune garages">
+    <ReelStage dur={R1_DUR} kicker="Stop answering “is it ready?”">
       <CallLog />
       <Caps caps={caps} />
       <StepPills />
