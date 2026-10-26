@@ -46,7 +46,7 @@ void home;
 const caps: CapSpec[] = [
   { from: 0.95, to: 3.3, text: 'Where is *every car* in your workshop right now?' },
   { from: 3.4, to: 5.3, text: 'Which car in *Bay 3?* Who’s on the Creta?' },
-  { from: 5.6, to: 9.0, text: '' },
+  { from: 5.6, to: 9.0, text: 'Open your *workshop.*' },
   { from: 9.1, to: 12.0, text: 'Tap any *bay.*' },
   { from: 12.1, to: 14.9, text: 'See the *job card.*' },
   { from: 15.0, to: 16.6, text: 'Your whole workshop. *One screen.*' },
