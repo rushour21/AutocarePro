@@ -16,7 +16,7 @@ for ((s=START; s<TOTAL; s+=CH)); do
       sleep 10
       cur=$(tr '\r' '\n' < $DIR/chunk_$s.log | grep -o "Rendered [0-9]*/" | tail -1)
       if [ "$cur" = "$last" ]; then idle=$((idle+1)); else idle=0; fi; last="$cur"
-      if [ $idle -ge 9 ]; then echo "stalled, killing"; pkill -P $pid; kill $pid; pkill -f chrome-linux/chrome; break; fi
+      if [ $idle -ge 9 ]; then echo "stalled, killing"; pkill -9 -f "remotion render"; pkill -9 -f compositor-linux; pkill -9 -f chrome-linux/chrome; sleep 2; break; fi
     done
     wait $pid 2>/dev/null
     [ -s $f ] && break
