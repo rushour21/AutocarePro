@@ -147,7 +147,7 @@ export function CardPop({ c }: { c: CardSpec }) {
   const off = (1 - p) * 760;
   const tx = d === 'left' ? -off : d === 'right' ? off : 0;
   const ty = d === 'up' ? off : d === 'down' ? -off : 0;
-  const rot = (c.rot ?? 0) * (c.swap ? 1 : lerp(2.2, 1, p));
+  const rot = c.swap ? 0 : (1 - p) * 3;
   const float = c.swap ? 0 : Math.sin(t * 1.3 + c.cx * 0.01) * 5;
   const left = c.cx - W_ / 2, top = c.cy - H_ / 2;
   const img = <Img src={staticFile(`cards/${c.name}.png`)} style={{ position: 'absolute', left: -pad, top: -pad, width: W_ + pad * 2, height: H_ + pad * 2, maxWidth: 'none' }} />;
@@ -185,8 +185,8 @@ export function Caps({ caps }: { caps: CapSpec[] }) {
         if (t < c.from - 0.02 || t > c.to + 0.01) return null;
         const out = 1 - clamp01((t - (c.to - 0.28)) / 0.28);
         return (
-          <div key={i} style={{ position: 'absolute', left: 70, right: 70, top: c.y ?? 262, opacity: out, transform: `translateY(${(1 - out) * -22}px)`, display: 'flex', justifyContent: c.align === 'center' ? 'center' : 'flex-start', textAlign: c.align === 'center' ? 'center' : 'left' }}>
-            <Kinetic wrap size={c.size ?? 84} gap={0.2} color={c.color ?? C.ink} words={words(c.text, c.from + 0.05)} style={{ justifyContent: c.align === 'center' ? 'center' : 'flex-start', width: RW - 140, rowGap: 4 }} />
+          <div key={i} style={{ position: 'absolute', left: 70, right: 70, top: c.y ?? 262, opacity: out, transform: `translateY(${(1 - out) * -22}px)`, display: 'flex', justifyContent: 'center', textAlign: 'center' }}>
+            <Kinetic wrap size={c.size ?? 84} gap={0.2} color={c.color ?? C.ink} words={words(c.text, c.from + 0.05)} style={{ justifyContent: 'center', width: RW - 140, rowGap: 4 }} />
           </div>
         );
       })}
@@ -203,7 +203,7 @@ export function Pill({ at, to, x, y, children, tone = 'dark', size = 38, rot = 0
   const out = to === undefined ? 1 : 1 - clamp01((t - to) / 0.3);
   const bg = { dark: C.ink, green: C.green, coral: C.coral, white: '#fff', red: '#e2453c' }[tone];
   return (
-    <div style={{ position: 'absolute', left: x, top: y, transform: `scale(${lerp(0.6, 1, p)}) rotate(${rot}deg)`, opacity: clamp01((t - at) / 0.15) * out, transformOrigin: '0 50%' }}>
+    <div style={{ position: 'absolute', left: 0, width: RW, top: y, display: 'flex', justifyContent: 'center', transform: `scale(${lerp(0.6, 1, p)})`, opacity: clamp01((t - at) / 0.15) * out, transformOrigin: '50% 50%' }}>
       <div style={{ background: bg, color: tone === 'white' ? C.ink : '#fff', borderRadius: 999, padding: `${size * 0.32}px ${size * 0.62}px`, fontSize: size, fontWeight: 800, letterSpacing: '-0.02em', boxShadow: '0 18px 40px rgba(40,25,10,0.28)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: size * 0.3 }}>{children}</div>
     </div>
   );

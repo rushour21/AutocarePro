@@ -36,8 +36,8 @@ const CARDS: CardSpec[] = [
   { name: 'r3_title', from: 7.9, to: 10.6, cx: 540, cy: 780, s: 3.0, dir: 'left' },
   { name: 'r3_stage_a', from: 8.0, to: 9.3, cx: 540, cy: 1000, s: 4.4, taps: [{ t: 8.9, key: 'sel' }] },
   { name: 'r3_stage_b', from: 9.15, to: 10.6, cx: 540, cy: 1000, s: 4.4, swap: true },
-  { name: 'r3_part', from: 10.4, to: 13.0, cx: 380, cy: 1110, s: 4.2, rot: -3, dir: 'left', taps: [{ t: 11.2, key: 'req' }] },
-  { name: 'r3_modal', from: 11.5, to: 13.0, cx: 580, cy: 1220, s: 2.15, dialog: true, taps: [{ t: 12.2, key: 'send' }] },
+  { name: 'r3_part', from: 10.4, to: 13.0, cx: 540, cy: 1110, s: 4.2, rot: -3, dir: 'left', taps: [{ t: 11.2, key: 'req' }] },
+  { name: 'r3_modal', from: 11.5, to: 13.0, cx: 540, cy: 1220, s: 2.15, dialog: true, taps: [{ t: 12.2, key: 'send' }] },
   { name: 'r3_banner', from: 13.7, to: 16.6, cx: 540, cy: 960, s: 2.8, taps: [{ t: 15.5, key: 'review' }] },
   { name: 'r3_part', from: 14.1, to: 16.6, cx: 540, cy: 1330, s: 2.4, rot: 2, dir: 'up' },
 ];
