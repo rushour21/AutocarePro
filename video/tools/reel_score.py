@@ -6,7 +6,11 @@ from scipy.io import wavfile
 SR = 44100
 key = sys.argv[1]
 out = sys.argv[2] if len(sys.argv) > 2 else f'public/audio/{key}_raw.wav'
-spec = json.load(open('src/reels/sfx.json'))[key]
+if key == 'r6':
+    j = json.load(open('src/reels/reel6.json'))
+    spec = {'dur': j['dur'], 'hits': j['hits']}
+else:
+    spec = json.load(open('src/reels/sfx.json'))[key]
 DUR = spec['dur'] + 0.4
 N = int(DUR * SR)
 rng = np.random.default_rng(abs(hash(key)) % 1000 + 3)
@@ -55,7 +59,22 @@ def impact(t, g=0.55):
     t_ = tt(0.9); put(sfx, t, np.sin(2 * np.pi * 52 * t_) * np.exp(-t_ / 0.25) + lp(noise(0.9), 600) * np.exp(-t_ / 0.15) * 0.4, g)
 for t, kind in spec['hits']: {'tick': tick, 'pop': pop, 'chime': chime, 'whoosh': whoosh, 'impact': impact}[kind](t)
 
-mix = music * 0.5 + sfx * 0.9
+vo = buf(); duck = np.ones(N)
+if key == 'r6':
+    from scipy.io import wavfile as wf
+    tm = json.load(open('src/reels/timing6.json'))
+    for ln in tm['lines']:
+        sr_, d_ = wf.read(f"public/audio/v6_{ln['n']}.wav")
+        d_ = d_.astype(np.float64) / (32768.0 if d_.dtype == np.int16 else 1.0)
+        if d_.ndim > 1: d_ = d_.mean(1)
+        if sr_ != SR:
+            from scipy.signal import resample_poly
+            from math import gcd
+            g_ = gcd(sr_, SR); d_ = resample_poly(d_, SR // g_, sr_ // g_)
+        put(vo, ln['start'], d_, 1.0)
+        duck[int((ln['start'] - 0.15) * SR): int((ln['end'] + 0.3) * SR)] = 0.4
+    duck = lp(duck, 4)
+mix = vo * 1.0 + music * 0.5 * duck + sfx * 0.7 if key == 'r6' else music * 0.5 + sfx * 0.9
 mix = np.tanh(mix * 1.1) / np.tanh(1.1)
 mix = mix / max(1e-9, np.abs(mix).max()) * 0.9
 wavfile.write(out, SR, (mix * 32767).astype(np.int16))

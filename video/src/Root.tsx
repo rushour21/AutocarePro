@@ -5,6 +5,7 @@ import { R2_DUR, Reel2 } from './reels/Reel2';
 import { R3_DUR, Reel3 } from './reels/Reel3';
 import { R4_DUR, Reel4 } from './reels/Reel4';
 import { R5_DUR, Reel5 } from './reels/Reel5';
+import { R6_DUR, Reel6 } from './reels/Reel6';
 import { Cover } from './reels/Covers';
 import { FPS, H, TOTAL_FRAMES, W } from './theme';
 
@@ -20,6 +21,7 @@ export const Root = () => (
     {reel('Reel3', Reel3, R3_DUR)}
     {reel('Reel4', Reel4, R4_DUR)}
     {reel('Reel5', Reel5, R5_DUR)}
+    {reel('Reel6', Reel6, R6_DUR)}
     {[1, 2, 3, 4, 5].map((n) => <Composition key={`c${n}`} id={`Cover${n}`} component={() => <Cover n={n} />} durationInFrames={90} fps={FPS} width={RW} height={RH} />)}
   </>
 );

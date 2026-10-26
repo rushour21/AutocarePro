@@ -127,6 +127,8 @@ export interface CardSpec {
   /** modal sheets are clipped to a rounded card */
   dialog?: boolean;
   taps?: { t: number; key: string }[];
+  /** taps at raw css positions inside the element */
+  rawTaps?: { t: number; x: number; y: number }[];
 }
 
 export function CardPop({ c }: { c: CardSpec }) {
@@ -151,6 +153,7 @@ export function CardPop({ c }: { c: CardSpec }) {
     <div style={{ position: 'absolute', left, top, width: W_, height: H_, opacity: fadeIn * (1 - q), transform: `translate(${tx}px, ${ty + float + q * 36}px) scale(${lerp(0.86, 1, p) * (1 - q * 0.04)}) rotate(${rot}deg)`, filter: c.dialog ? undefined : 'drop-shadow(0 34px 38px rgba(40,25,10,0.26))' }}>
       {c.dialog ? <div style={{ position: 'absolute', inset: 0, borderRadius: 24 * s, overflow: 'hidden', boxShadow: '0 40px 90px rgba(40,25,10,0.34), 0 0 0 5px rgba(255,255,255,0.9)' }}>{img}</div> : img}
       {(c.taps ?? []).map((tp, i) => { const pt = m.taps[tp.key]; return pt ? <TapMark key={i} at={tp.t} x={pt.x * s} y={pt.y * s} k={1.25} /> : null; })}
+      {(c.rawTaps ?? []).map((tp, i) => <TapMark key={`r${i}`} at={tp.t} x={tp.x * s} y={tp.y * s} k={1.25} />)}
     </div>
   );
 }
