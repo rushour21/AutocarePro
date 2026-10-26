@@ -7,7 +7,7 @@ import type {
 const AV = (n: string) => `/assets/avatars/${n}.png`;
 const PH = (n: string) => `/assets/photos/${n}.jpg`;
 
-export const DB_VERSION = 6;
+export const DB_VERSION = 7;
 export const TODAY_LABEL = 'Mon, 16 Mar 2025';
 
 // ------------------------------------------------------------------ users
@@ -61,14 +61,14 @@ const veh = (customerId: string, key: keyof typeof MODELS, reg: string, odometer
   return { id: `v-${++vSeq}`, customerId, ...m, reg, year: 2020 + (vSeq % 4), odometer, serviceInDays, ...extra };
 };
 const V = {
-  bmw3: veh('c-rahul-m', 'bmw3', 'KA01AB1234', 42500, 5, { primary: true, year: 2021 }),
-  audiPriya: veh('c-priya-m', 'audiq5', 'KA01CD5678', 38200, -3, { year: 2020 }),
-  glcSneha: veh('c-sneha-m', 'glc', 'KA01EF9012', 51000, 12, { year: 2021 }),
-  rrNeha: veh('c-neha-p', 'rangerover', 'KA03IJ3456', 28450, 3, { year: 2022 }),
-  fortRohit: veh('c-rohit-k', 'fortuner', 'KA02GH9012', 62300, -6, { year: 2022 }),
-  audiRm: veh('c-rahul-m', 'audiq5', 'KA01CD5688', 38200, 60, { year: 2020 }),
-  glcRm: veh('c-rahul-m', 'glc', 'KA01EF9014', 51000, 75, { year: 2021 }),
-  fortRm: veh('c-rahul-m', 'fortuner', 'KA02GH9014', 62300, 90, { year: 2022 }),
+  bmw3: veh('c-rahul-m', 'bmw3', 'MH12AB1234', 42500, 5, { primary: true, year: 2021 }),
+  audiPriya: veh('c-priya-m', 'audiq5', 'MH12CD5678', 38200, -3, { year: 2020 }),
+  glcSneha: veh('c-sneha-m', 'glc', 'MH12EF9012', 51000, 12, { year: 2021 }),
+  rrNeha: veh('c-neha-p', 'rangerover', 'MH12IJ3456', 28450, 3, { year: 2022 }),
+  fortRohit: veh('c-rohit-k', 'fortuner', 'MH14GH9012', 62300, -6, { year: 2022 }),
+  audiRm: veh('c-rahul-m', 'audiq5', 'MH12CD5688', 38200, 60, { year: 2020 }),
+  glcRm: veh('c-rahul-m', 'glc', 'MH12EF9014', 51000, 75, { year: 2021 }),
+  fortRm: veh('c-rahul-m', 'fortuner', 'MH14GH9014', 62300, 90, { year: 2022 }),
   cityRs: veh('c-rahul-s', 'city', 'MH12AB4455', 31200, 45, { year: 2021 }),
   x5Rs: veh('c-rahul-s', 'bmwx5', 'MH12CD7788', 22100, 50),
   rrRs: veh('c-rahul-s', 'rangerover', 'MH12EF9900', 18700, 40),

@@ -99,7 +99,7 @@ export default function NewJobPage() {
     }
     if (!nv.make.trim()) e.make = 'Enter the make';
     if (!nv.model.trim()) e.model = 'Enter the model';
-    if (!REG_RE.test(nv.reg.trim())) e.reg = 'Use a format like KA01AB1234';
+    if (!REG_RE.test(nv.reg.trim())) e.reg = 'Use a format like MH12AB1234';
     else if (db.vehicles.some((v) => v.reg === normReg(nv.reg))) e.reg = 'This registration is already saved. Search it by number instead.';
     const odo = Number(nv.odometer.replace(/,/g, ''));
     if (nv.odometer.trim() === '' || !Number.isFinite(odo) || odo < 0) e.odometer = 'Enter the odometer reading';
@@ -194,7 +194,7 @@ export default function NewJobPage() {
               </div>
               {!creating ? (
                 <div className="flex gap-2.5">
-                  <SearchInput value={q} onChange={setQ} placeholder={mode === 'number' ? 'Enter registration number (e.g. KA01AB1234)' : 'Enter customer name'} className="flex-1 !h-11" />
+                  <SearchInput value={q} onChange={setQ} placeholder={mode === 'number' ? 'Enter registration number (e.g. MH12AB1234)' : 'Enter customer name'} className="flex-1 !h-11" />
                   <Button className="!h-11 px-5" aria-label="Search"><Search className="h-4 w-4" /> <span className="hidden sm:inline">Search</span></Button>
                 </div>
               ) : (
@@ -229,7 +229,7 @@ export default function NewJobPage() {
                       <Field label="Model *" error={err.model}><Input value={nv.model} onChange={(e) => setNv({ ...nv, model: e.target.value, quick: '' })} placeholder="e.g. City" /></Field>
                       <Field label="Variant (optional)"><Input value={nv.variant} onChange={(e) => setNv({ ...nv, variant: e.target.value })} placeholder="e.g. ZX CVT" /></Field>
                       <Field label="Fuel"><Select value={nv.fuel} onChange={(e) => setNv({ ...nv, fuel: e.target.value as Vehicle['fuel'] })}>{['Petrol', 'Diesel', 'Hybrid', 'Electric'].map((f) => <option key={f}>{f}</option>)}</Select></Field>
-                      <Field label="Registration number *" error={err.reg}><Input value={nv.reg} onChange={(e) => setNv({ ...nv, reg: e.target.value })} placeholder="KA01AB1234" autoCapitalize="characters" /></Field>
+                      <Field label="Registration number *" error={err.reg}><Input value={nv.reg} onChange={(e) => setNv({ ...nv, reg: e.target.value })} placeholder="MH12AB1234" autoCapitalize="characters" /></Field>
                       <Field label="Year"><Select value={nv.year} onChange={(e) => setNv({ ...nv, year: e.target.value })}>{YEARS.map((y) => <option key={y}>{y}</option>)}</Select></Field>
                       <Field label="Odometer (km) *" error={err.odometer}><Input inputMode="numeric" value={nv.odometer} onChange={(e) => setNv({ ...nv, odometer: e.target.value })} placeholder="42,500" /></Field>
                       <Field label="Picture"><Select value={nv.carKey} onChange={(e) => setNv({ ...nv, carKey: e.target.value as CarKey })}>{BODY_STYLES.map((b) => <option key={b.carKey} value={b.carKey}>{b.label}</option>)}</Select></Field>

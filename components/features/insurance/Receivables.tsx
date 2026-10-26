@@ -34,7 +34,21 @@ export function Receivables() {
 
       <Card className="p-4 sm:p-5">
         <h2 className="mb-3 text-[17px] font-bold tracking-tight">By insurer</h2>
-        <div className="thin-scroll overflow-x-auto">
+        <ul className="space-y-2.5 sm:hidden">
+          {r.rows.map((x) => (
+            <li key={x.insurer} className="rounded-2xl bg-ivory-100 p-3.5">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-sm font-semibold">{x.insurer}</p>
+                <p className="text-lg font-bold tracking-tight">{inr(x.pending)}</p>
+              </div>
+              <p className="mt-1 text-xs text-ink-500">
+                {x.claims} claims · oldest <span className={x.oldestDays > 30 ? 'font-semibold text-bad' : ''}>{x.claims ? `${x.oldestDays} days` : '-'}</span>
+                {x.shortPaid > 0 && <> · <span className="font-semibold text-warn">{inr(x.shortPaid)} short-paid</span></>}
+              </p>
+            </li>
+          ))}
+        </ul>
+        <div className="thin-scroll hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[520px] text-left text-sm">
             <thead>
               <tr className="text-[12px] font-medium text-ink-400"><th className="pb-2">Insurer</th><th className="pb-2 text-right">Pending</th><th className="pb-2 text-right">Claims</th><th className="pb-2 text-right">Oldest pending</th><th className="pb-2 text-right">Short-paid</th></tr>
