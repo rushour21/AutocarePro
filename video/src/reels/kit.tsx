@@ -149,7 +149,7 @@ function Intro({ dur = 0.95 }: { dur?: number }) {
   );
 }
 
-function Outro({ dur, kicker, cta, sub }: { dur: number; kicker: string; cta: string; sub?: string }) {
+function Outro({ dur, kicker, cta, sub }: { dur: number; kicker: string; cta?: string; sub?: string }) {
   const frame = useCurrentFrame();
   const t = frame / FPS;
   const start = dur - 1.85;
@@ -163,14 +163,14 @@ function Outro({ dur, kicker, cta, sub }: { dur: number; kicker: string; cta: st
         <LogoMark size={150} draw={1} glow={0.6} />
         <Wordmark size={96} color="#fff" />
         <p style={{ margin: '40px 0 0', color: '#fff', fontWeight: 800, fontSize: 70, lineHeight: 1.05, letterSpacing: '-0.035em', fontFamily: 'Inter Display, Inter, sans-serif', opacity: clamp01((t - start - 0.2) / 0.25) }}>{kicker}</p>
-        <div style={{ transform: `scale(${lerp(0.7, 1, p)})`, opacity: clamp01((t - start - 0.35) / 0.2), background: `linear-gradient(180deg, #ff8a4a, ${C.coralDark})`, color: '#fff', borderRadius: 999, padding: '26px 64px', fontSize: 66, fontWeight: 800, letterSpacing: '-0.02em', boxShadow: '0 20px 50px rgba(242,106,46,0.45)' }}>{cta}</div>
-        {sub && <p style={{ margin: 0, color: 'rgba(255,255,255,0.62)', fontSize: 36, fontWeight: 600 }}>{sub}</p>}
+        {cta && <div style={{ transform: `scale(${lerp(0.7, 1, p)})`, opacity: clamp01((t - start - 0.35) / 0.2), background: `linear-gradient(180deg, #ff8a4a, ${C.coralDark})`, color: '#fff', borderRadius: 999, padding: '26px 64px', fontSize: 66, fontWeight: 800, letterSpacing: '-0.02em', boxShadow: '0 20px 50px rgba(242,106,46,0.45)' }}>{cta}</div>}
+        {sub && <p style={{ margin: cta ? 0 : '6px 0 0', color: 'rgba(255,255,255,0.62)', fontSize: 38, fontWeight: 600, opacity: clamp01((t - start - 0.4) / 0.25) }}>{sub}</p>}
       </div>
     </AbsoluteFill>
   );
 }
 
-export function ReelStage({ dur, kicker, cta, sub, children, tone = 'ivory' }: { dur: number; kicker: string; cta: string; sub?: string; children: ReactNode; tone?: 'ivory' | 'sky' }) {
+export function ReelStage({ dur, kicker, cta, sub, children, tone = 'ivory' }: { dur: number; kicker: string; cta?: string; sub?: string; children: ReactNode; tone?: 'ivory' | 'sky' }) {
   const frame = useCurrentFrame();
   const t = frame / FPS;
   return (

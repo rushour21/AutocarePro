@@ -52,7 +52,7 @@ const caps: CapSpec[] = [
 ];
 
 export const Reel3 = () => (
-  <ReelStage dur={R3_DUR} kicker="Jobs, status & parts. From the phone." cta="DM “DEMO”" sub="Built for Pune garages">
+  <ReelStage dur={R3_DUR} kicker="Jobs, status & parts. From the phone." sub="Built for Pune garages">
     <Walk />
     <Caps caps={caps} />
     <PhoneRig enter={4.9} layers={layers} />
