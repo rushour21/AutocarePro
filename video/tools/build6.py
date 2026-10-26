@@ -22,12 +22,13 @@ def cap(k, text, f0=0, f1=1, size=None):
     a, b = span(k, f0, f1); d = {'from': a, 'to': b, 'text': text}
     if size: d['size'] = size
     caps.append(d); return a
-def card(k, name, f0, f1, cx, cy, s, rot=0, dir=None, swap=False, dialog=False, taps=None, raw=None):
+def card(k, name, f0, f1, cx, cy, s, rot=0, dir=None, swap=False, dialog=False, taps=None, raw=None, panel=False):
     a, b = span(k, f0, f1)
     d = {'name': name, 'from': a, 'to': b, 'cx': cx, 'cy': cy, 's': s, 'rot': rot}
     if dir: d['dir'] = dir
     if swap: d['swap'] = True
     if dialog: d['dialog'] = True
+    if panel: d['panel'] = True
     if taps: d['taps'] = [{'t': A(k, f), 'key': key} for f, key in taps]
     if raw: d['rawTaps'] = [{'t': A(k, f), 'x': x, 'y': y} for f, x, y in raw]
     cards.append(d)
@@ -104,10 +105,10 @@ card('recv', 'r5_ins', 0.45, 1, 540, 1050, 2.7, rot=-1)
 
 cap('more', 'Calendar. Inventory. *Reports. Team.*')
 card('more', 'r6_cal', 0, 0.28, 540, 1050, 1.45, rot=-2)
-card('more', 'r6_inv', 0.25, 0.52, 540, 1050, 1.95, rot=2, dir='right')
+card('more', 'r6_inv', 0.25, 0.52, 540, 1050, 1.95, rot=2, dir='right', panel=True)
 card('more', 'r6_rev', 0.50, 0.80, 540, 700, 2.5, rot=-1)
 card('more', 'r6_trend', 0.52, 0.80, 540, 1180, 2.4, rot=1, dir='left')
-card('more', 'r6_team', 0.78, 1, 540, 1050, 1.95, rot=-1)
+card('more', 'r6_team', 0.78, 1, 540, 1050, 1.95, rot=-1, panel=True)
 
 # ---- sound: a whoosh on every scene change, plus the intro/outro stings
 for k in KEYS: hits.append([round(start(k) + 0.05, 3), 'whoosh'])

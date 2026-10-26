@@ -373,7 +373,8 @@
    "cy": 1050,
    "s": 1.95,
    "rot": 2,
-   "dir": "right"
+   "dir": "right",
+   "panel": true
   },
   {
    "name": "r6_rev",
@@ -401,7 +402,8 @@
    "cx": 540,
    "cy": 1050,
    "s": 1.95,
-   "rot": -1
+   "rot": -1,
+   "panel": true
   }
  ],
  "pills": [
