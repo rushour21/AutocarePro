@@ -7,15 +7,16 @@ import { CalendarClock, ChevronLeft, Link2, Phone, Plus, Wrench } from 'lucide-r
 import { TopBar } from '@/components/layout/AppShell';
 import { JobStepper, TaskList } from '@/components/features/JobProgress';
 import { NoAccess } from '@/components/features/NoAccess';
-import { Avatar, Button, Card, EmptyState, FilterTabs, Input, Modal, ProgressBar, Select, StatusBadge, Textarea, VehicleImage, useToast } from '@/components/ui';
-import { addJobPhoto, addNote, addTask, decidePartRequest, reassignJob, sendMessage, setJobNotes, setJobStage } from '@/lib/actions';
+import { Avatar, Button, Card, EmptyState, FilterTabs, Input, Modal, ProgressBar, Select, StatusBadge, Textarea, Toggle, VehicleImage, useToast } from '@/components/ui';
+import { ClaimWorkspace } from '@/components/features/insurance/ClaimWorkspace';
+import { addJobPhoto, addNote, addTask, decidePartRequest, reassignJob, sendMessage, setJobInsurance, setJobNotes, setJobStage } from '@/lib/actions';
 import { getJobFor } from '@/lib/access';
 import { useSession } from '@/lib/auth';
 import { customerOf, estimateOfJob, inr, km, STAGE_LABEL, userOf, vehicleName, vehicleOf, estimateTotals } from '@/lib/format';
 import { useDb } from '@/lib/store';
 import type { Stage } from '@/lib/types';
 
-type Tab = 'overview' | 'inspection' | 'tasks' | 'parts' | 'photos' | 'messages' | 'history';
+type Tab = 'overview' | 'inspection' | 'tasks' | 'parts' | 'photos' | 'messages' | 'history' | 'insurance';
 const STAGES: Stage[] = ['pending', 'inspection', 'diagnostics', 'in_repair', 'quality_check', 'ready', 'delivered'];
 const SAMPLE = ['disc-orange', 'disc-dark', 'garage-1', 'estimate-disc', 'bumper', 'pads-chat'].map((n) => `/assets/photos/${n}.jpg`);
 
@@ -57,7 +58,11 @@ function Inner() {
         </Link>
         <h1 className="text-[24px] font-bold tracking-tight">#{job.id} - {vehicleName(v)}</h1>
         <StatusBadge tone={job.stage === 'delivered' || job.stage === 'ready' ? 'green' : 'green'} dot size="lg">{job.stage === 'in_repair' ? 'In Progress' : STAGE_LABEL[job.stage]}</StatusBadge>
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-ink-600">
+            <Toggle checked={!!job.isInsurance} onChange={(on) => { setJobInsurance(job.id, on, user.name); setTab(on ? 'insurance' : 'overview'); }} label="Insurance job" />
+            Insurance job
+          </label>
           <Button
             variant="neu"
             size="sm"
@@ -90,8 +95,11 @@ function Inner() {
           { value: 'photos', label: 'Photos' },
           { value: 'messages', label: 'Messages' },
           { value: 'history', label: 'History' },
+          ...(job.isInsurance && job.claimId ? [{ value: 'insurance' as const, label: 'Insurance' }] : []),
         ]}
       />
+
+      {tab === 'insurance' && job.claimId && <ClaimWorkspace claimId={job.claimId} embedded />}
 
       {tab === 'overview' && (
         <div className="space-y-5">

@@ -1,3 +1,4 @@
+import { insuranceSeed } from './seedClaims';
 import type {
   Activity, Bay, BayState, BayType, CarKey, Channel, Customer, Db, Estimate, InspectionPoint, Invoice, Job, Message, Notification,
   Fixture, Part, PartRequest, Stage, User, Vehicle, Zone, Task, ChecklistItem, PointStatus,
@@ -6,7 +7,7 @@ import type {
 const AV = (n: string) => `/assets/avatars/${n}.png`;
 const PH = (n: string) => `/assets/photos/${n}.jpg`;
 
-export const DB_VERSION = 5;
+export const DB_VERSION = 7;
 export const TODAY_LABEL = 'Mon, 16 Mar 2025';
 
 // ------------------------------------------------------------------ users
@@ -50,6 +51,8 @@ const MODELS: Record<string, { make: string; model: string; variant: string; fue
   bmwx5: { make: 'BMW', model: 'X5', variant: 'xDrive30d', fuel: 'Diesel', carKey: 'bmwx5' },
   rangerover: { make: 'Range Rover', model: 'Sport', variant: '3.0 D', fuel: 'Diesel', carKey: 'rangerover' },
   city: { make: 'Honda', model: 'City', variant: 'ZX CVT', fuel: 'Petrol', carKey: 'bmw3' },
+  creta: { make: 'Hyundai', model: 'Creta', variant: 'SX(O) 1.5 Petrol', fuel: 'Petrol', carKey: 'audiq5' },
+  xuv700: { make: 'Mahindra', model: 'XUV700', variant: 'AX7 2.2 Diesel', fuel: 'Diesel', carKey: 'fortuner' },
   cayman: { make: 'Porsche', model: 'Cayman', variant: '718 GTS', fuel: 'Petrol', carKey: 'bmw3' },
 };
 let vSeq = 0;
@@ -58,14 +61,14 @@ const veh = (customerId: string, key: keyof typeof MODELS, reg: string, odometer
   return { id: `v-${++vSeq}`, customerId, ...m, reg, year: 2020 + (vSeq % 4), odometer, serviceInDays, ...extra };
 };
 const V = {
-  bmw3: veh('c-rahul-m', 'bmw3', 'KA01AB1234', 42500, 5, { primary: true, year: 2021 }),
-  audiPriya: veh('c-priya-m', 'audiq5', 'KA01CD5678', 38200, -3, { year: 2020 }),
-  glcSneha: veh('c-sneha-m', 'glc', 'KA01EF9012', 51000, 12, { year: 2021 }),
-  rrNeha: veh('c-neha-p', 'rangerover', 'KA03IJ3456', 28450, 3, { year: 2022 }),
-  fortRohit: veh('c-rohit-k', 'fortuner', 'KA02GH9012', 62300, -6, { year: 2022 }),
-  audiRm: veh('c-rahul-m', 'audiq5', 'KA01CD5688', 38200, 60, { year: 2020 }),
-  glcRm: veh('c-rahul-m', 'glc', 'KA01EF9014', 51000, 75, { year: 2021 }),
-  fortRm: veh('c-rahul-m', 'fortuner', 'KA02GH9014', 62300, 90, { year: 2022 }),
+  bmw3: veh('c-rahul-m', 'bmw3', 'MH12AB1234', 42500, 5, { primary: true, year: 2021 }),
+  audiPriya: veh('c-priya-m', 'audiq5', 'MH12CD5678', 38200, -3, { year: 2020 }),
+  glcSneha: veh('c-sneha-m', 'glc', 'MH12EF9012', 51000, 12, { year: 2021 }),
+  rrNeha: veh('c-neha-p', 'rangerover', 'MH12IJ3456', 28450, 3, { year: 2022 }),
+  fortRohit: veh('c-rohit-k', 'fortuner', 'MH14GH9012', 62300, -6, { year: 2022 }),
+  audiRm: veh('c-rahul-m', 'audiq5', 'MH12CD5688', 38200, 60, { year: 2020 }),
+  glcRm: veh('c-rahul-m', 'glc', 'MH12EF9014', 51000, 75, { year: 2021 }),
+  fortRm: veh('c-rahul-m', 'fortuner', 'MH14GH9014', 62300, 90, { year: 2022 }),
   cityRs: veh('c-rahul-s', 'city', 'MH12AB4455', 31200, 45, { year: 2021 }),
   x5Rs: veh('c-rahul-s', 'bmwx5', 'MH12CD7788', 22100, 50),
   rrRs: veh('c-rahul-s', 'rangerover', 'MH12EF9900', 18700, 40),
@@ -256,6 +259,21 @@ const jobs: Job[] = [
     completedOn: h.on, completedInDays: h.days, estCompletion: h.on, estCompletionDate: h.on,
   })),
 ];
+// ------------------------------------------------------------------ insurance claims (mock): each claim brings its own customer, vehicle and job card
+const ins = insuranceSeed(
+  {
+    cust: (id, name, phone, spent, last, avatar) => cust(id, name, phone, spent, last, avatar),
+    veh: (customerId, key, reg, odo, due, extra) => veh(customerId, key as keyof typeof MODELS, reg, odo, due, extra),
+    mkJob: (s) => mkJob(s as unknown as JobSpec),
+    avatars: FILLER_AV,
+  },
+  1031,
+  customers,
+);
+customers.push(...ins.customers);
+vehicles.push(...ins.vehicles);
+jobs.push(...ins.jobs);
+
 // Bay-bound inspection photos for the active BMW job
 jobs.find((j) => j.id === 'J1004')!.notes = 'Customer asked for a road test after the brake job.';
 
@@ -328,6 +346,7 @@ const messages: Message[] = [
 // ------------------------------------------------------------------ notifications (customer)
 const n = (id: string, kind: Notification['kind'], title: string, sub: string, ago: string, read: boolean, href?: string): Notification => ({ id, customerId: 'c-rahul-m', kind, title, sub, ago, read, href });
 const notifications: Notification[] = [
+  n('n6', 'estimate', 'Insurance claim: approve your share', 'Hyundai Creta · You pay ₹6,450', '1 hour ago', false, '/customer/jobs/J1033'),
   n('n1', 'service', 'Your vehicle is in Repair', 'BMW 3 Series', '2 hours ago', false, '/customer/jobs/J1004'),
   n('n2', 'estimate', 'Estimate EST-1024 awaiting approval', 'BMW 3 Series', '4 hours ago', false, '/customer/estimates/EST-1024'),
   n('n3', 'ready', 'Your vehicle is ready for delivery', 'Audi Q5', '2 days ago', true),
@@ -374,6 +393,7 @@ export const createSeed = (): Db => ({
     { id: 's3', name: 'Castrol', contact: 'Mohan Das', phone: '+91 98220 11003', category: 'Fluids' },
     { id: 's4', name: 'NGK', contact: 'Hiroshi Tanaka', phone: '+91 98220 11004', category: 'Electrical' },
   ],
+  claims: ins.claims,
   channels, messages,
   announcements: [
     { id: 'an1', title: 'Safety briefing', body: 'Mandatory lift-safety refresher this Friday at 4:00 PM in Bay 1.', at: '15 Mar 2025', by: 'Rahul Sharma' },

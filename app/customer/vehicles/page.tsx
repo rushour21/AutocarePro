@@ -31,7 +31,7 @@ export default function CustomerVehicles() {
 
   const submit = () => {
     const e: Record<string, string> = {};
-    if (!/^[A-Za-z]{2}\s?\d{1,2}\s?[A-Za-z]{1,3}\s?\d{3,4}$/.test(f.reg.trim())) e.reg = 'Use a format like KA01AB1234';
+    if (!/^[A-Za-z]{2}\s?\d{1,2}\s?[A-Za-z]{1,3}\s?\d{3,4}$/.test(f.reg.trim())) e.reg = 'Use a format like MH12AB1234';
     const odo = Number(f.odometer.replace(/,/g, ''));
     if (!f.odometer || !Number.isFinite(odo) || odo < 0) e.odometer = 'Enter the odometer reading';
     if (db.vehicles.some((v) => v.reg.toUpperCase() === f.reg.replace(/\s/g, '').toUpperCase())) e.reg = 'This vehicle is already registered';
@@ -69,7 +69,7 @@ export default function CustomerVehicles() {
         <div className="space-y-4">
           <Field label="Model"><Select value={f.model} onChange={(e) => setF({ ...f, model: e.target.value })}>{MODELS.map((m) => <option key={m.key} value={m.key}>{m.make} {m.model}</option>)}</Select></Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Registration" error={err.reg}><Input value={f.reg} onChange={(e) => setF({ ...f, reg: e.target.value })} placeholder="KA01AB1234" /></Field>
+            <Field label="Registration" error={err.reg}><Input value={f.reg} onChange={(e) => setF({ ...f, reg: e.target.value })} placeholder="MH12AB1234" /></Field>
             <Field label="Year"><Select value={f.year} onChange={(e) => setF({ ...f, year: e.target.value })}>{[2025, 2024, 2023, 2022, 2021, 2020, 2019].map((y) => <option key={y}>{y}</option>)}</Select></Field>
           </div>
           <Field label="Odometer (km)" error={err.odometer}><Input inputMode="numeric" value={f.odometer} onChange={(e) => setF({ ...f, odometer: e.target.value })} /></Field>

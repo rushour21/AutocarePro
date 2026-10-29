@@ -139,6 +139,9 @@ export interface Job {
   completedInDays?: number;
   onHold?: boolean;
   feedback?: { rating: number; comment: string; at: string };
+  /** marked as an insurance job; the claim itself lives in Db.claims */
+  isInsurance?: boolean;
+  claimId?: string;
 }
 
 export type EstimateStatus = 'Awaiting Approval' | 'Approved' | 'Rejected' | 'Draft';
@@ -338,6 +341,80 @@ export interface Announcement {
   by: string;
 }
 
+export type ClaimStatus =
+  | 'Intimated' | 'Docs Pending' | 'Estimate Ready' | 'Survey Scheduled' | 'Surveyed' | 'Approved'
+  | 'In Repair' | 'Re-inspection' | 'DO Received' | 'Delivered' | 'Payment Pending' | 'Settled';
+export type ClaimType = 'Cashless' | 'Reimbursement';
+export type ClaimDocKind = 'policy' | 'rc' | 'dl' | 'claim_form' | 'fir';
+
+export interface ClaimDoc {
+  kind: ClaimDocKind;
+  label: string;
+  required: boolean;
+  uploaded: boolean;
+  uploadedAt?: string;
+}
+
+export type ClaimPhotoStage = 'Intake' | 'Old parts' | 'Final';
+
+export interface ClaimPhoto {
+  id: string;
+  label: string;
+  stage: ClaimPhotoStage;
+  uploaded: boolean;
+  src?: string;
+}
+
+export interface ClaimLine {
+  id: string;
+  name: string;
+  kind: 'part' | 'labour' | 'paint';
+  amount: number;
+  /** true: the insurer pays this line (subject to depreciation and deductible); false: the customer pays it */
+  covered: boolean;
+}
+
+export interface ClaimEvent {
+  id: string;
+  /** ISO datetime, e.g. 2025-03-12T10:30 */
+  at: string;
+  text: string;
+  by: string;
+}
+
+export interface Claim {
+  id: string;
+  jobId: string;
+  type: ClaimType;
+  insurer: string;
+  policyNo: string;
+  claimNo: string;
+  accidentDate: string;
+  surveyorName: string;
+  surveyorPhone: string;
+  status: ClaimStatus;
+  /** SLA anchors (ISO datetimes) */
+  intimatedAt: string;
+  surveyorAllocatedAt?: string;
+  reportAt?: string;
+  decisionAt?: string;
+  docs: ClaimDoc[];
+  photos: ClaimPhoto[];
+  lines: ClaimLine[];
+  /** per-claim settings: nothing is hard-coded in the split logic */
+  deductible: number;
+  depreciationPct: number;
+  zeroDep: boolean;
+  customerApprovedAt?: string;
+  packAt?: string;
+  surveyorRemarks?: string;
+  approvedAmount?: number;
+  /** insurer payment tracking */
+  received: number;
+  receivedOn?: string;
+  events: ClaimEvent[];
+}
+
 export interface Db {
   version: number;
   today: string;
@@ -357,5 +434,6 @@ export interface Db {
   announcements: Announcement[];
   notifications: Notification[];
   bookings: Booking[];
+  claims: Claim[];
   prefs: Record<string, Record<string, boolean | string>>;
 }

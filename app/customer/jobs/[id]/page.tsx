@@ -1,6 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import { CustomerShareCard } from '@/components/features/insurance/CustomerShareCard';
 import { JobStatusView } from '@/components/features/JobStatusView';
 import { NoAccess } from '@/components/features/NoAccess';
 import { TopBar } from '@/components/layout/AppShell';
@@ -17,6 +18,7 @@ export default function CustomerJobPage() {
   return (
     <>
       <TopBar showUser />
+      <CustomerShareCard jobId={job.id} customerName={user.name} />
       <JobStatusView job={job} detailsHref={`/customer/jobs/${job.id}/details`} />
     </>
   );
