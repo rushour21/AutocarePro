@@ -46,3 +46,7 @@ Demo jobs: BMW in repair (J1004) and a completed BMW (J0987) for the Ready / Rep
 ## Demo-build limits
 
 Mock data and sign-in live in the browser (no backend), so a share link only reflects data in the browser that created it; with a real API it works from any device. The “Live from Workshop” image is a still photo, and Time-lapse is not implemented. The cookie used by `middleware.ts` is unsigned and must be replaced by a real signed session. The 3D workshop is generated from the saved layout and live jobs, but its cars and props are simple procedural models, not photoreal assets. "Live" means this browser last saw a change; real multi-user live updates need a backend (polling or WebSockets). Landing-page statistics (4.9/5, 10K+, 5+ years) are placeholders copied from the design.
+
+## Documentation
+
+A full user manual (job creation, service flow, admin, technician, customer, insurance claims, workshop layout, FAQ) is in [`docs/user-manual/`](docs/user-manual/README.md).
