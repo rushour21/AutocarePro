@@ -5,7 +5,7 @@ import { TopBar } from '@/components/layout/AppShell';
 import { Button, EmptyState, PageHeader, Select, StatusBadge, VehicleImage } from '@/components/ui';
 import { visibleJobs, visibleVehicles } from '@/lib/access';
 import { useSession } from '@/lib/auth';
-import { estimateOfJob, estimateTotals, inr, vehicleName, vehicleOf } from '@/lib/format';
+import { estimateOfJob, estimateTotals, quotedItems, inr, vehicleName, vehicleOf } from '@/lib/format';
 import { useDb } from '@/lib/store';
 
 export default function ServiceHistory() {
@@ -19,7 +19,7 @@ export default function ServiceHistory() {
     const inv = db.invoices.find((i) => i.jobId === id);
     if (inv) return inv.amount;
     const e = estimateOfJob(db, id);
-    return e ? estimateTotals(e.items).total : 0;
+    return e ? estimateTotals(quotedItems(e)).total : 0;
   };
   return (
     <>

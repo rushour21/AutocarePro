@@ -2,12 +2,14 @@
 
 import Link from 'next/link';
 import clsx from 'clsx';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { Check, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Tone } from '@/lib/format';
 
 export const cn = clsx;
+
+export { Select } from './Select';
 
 /* ------------------------------------------------------------------ surfaces */
 export function Card({ className, children, ...rest }: React.HTMLAttributes<HTMLDivElement>) {
@@ -64,7 +66,7 @@ const TONE: Record<Tone, string> = {
   red: 'bg-bad-soft text-bad-strong',
   blue: 'bg-info-soft text-info-strong',
   violet: 'bg-violet-soft text-violet-strong',
-  gray: 'bg-[#ece5dc] text-ink-500',
+  gray: 'bg-[#e8eaed] text-ink-500',
   coral: 'bg-coral-100 text-coral-600',
 };
 const TONE_DOT: Record<Tone, string> = {
@@ -75,7 +77,7 @@ export function StatusBadge({ tone, children, dot, className, size = 'md' }: { t
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl font-medium shadow-[inset_0_0_0_1px_rgba(255,255,255,0.5)]',
+        'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full font-medium',
         size === 'sm' ? 'px-2 py-0.5 text-[11px]' : size === 'lg' ? 'px-3.5 py-1.5 text-sm' : 'px-2.5 py-1 text-xs',
         TONE[tone],
         className,
@@ -125,17 +127,19 @@ export function Toggle({ checked, onChange, disabled, label }: { checked: boolea
       disabled={disabled}
       onClick={() => onChange?.(!checked)}
       className={cn(
-        'relative h-6 w-11 shrink-0 rounded-full transition disabled:cursor-not-allowed disabled:opacity-60',
-        checked ? 'bg-gradient-to-b from-coral-400 to-coral-600 shadow-[inset_0_1px_2px_rgba(0,0,0,0.15)]' : 'neu-in-sm !rounded-full',
+        'group relative h-7 w-[46px] shrink-0 rounded-full transition-colors duration-300 disabled:cursor-not-allowed disabled:opacity-60',
+        checked ? 'bg-coral-500' : 'bg-ink-500/25',
       )}
     >
-      <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-all', checked ? 'left-[22px]' : 'left-0.5')} />
+      <span
+        className={cn('absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-white shadow-[0_2px_6px_rgba(0,0,0,0.2),0_0_0_0.5px_rgba(0,0,0,0.04)] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-active:w-7', checked ? 'translate-x-[18px] group-active:translate-x-3.5' : 'translate-x-0')}
+      />
     </button>
   );
 }
 
 export function ProgressBar({ value, tone = 'green', className, label }: { value: number; tone?: 'green' | 'coral' | 'gray'; className?: string; label?: React.ReactNode }) {
-  const fill = tone === 'green' ? 'from-[#2fcf8a] to-[#18a56a]' : tone === 'coral' ? 'from-[#ff9a5e] to-[#f25a1f]' : 'from-[#bdb6ab] to-[#a29a8d]';
+  const fill = tone === 'green' ? 'from-[#3fae90] to-[#248a6c]' : tone === 'coral' ? 'from-[#e4633f] to-[#cf4320]' : 'from-[#bcbfc5] to-[#a0a3aa]';
   return (
     <div className={cn('relative h-2.5 w-full overflow-hidden rounded-full neu-in-sm !rounded-full', className)} role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
       <div className={cn('h-full rounded-full bg-gradient-to-b', fill)} style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
@@ -153,48 +157,46 @@ export interface TabDef<T extends string = string> {
   emphasis?: boolean;
 }
 
+function Segmented<T extends string>({ tabs, value, onChange, className }: { tabs: TabDef<T>[]; value: T; onChange: (v: T) => void; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [thumb, setThumb] = useState({ x: 0, w: 0 });
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      const b = el.querySelector<HTMLElement>('[aria-selected="true"]');
+      if (b) setThumb({ x: b.offsetLeft, w: b.offsetWidth });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [value, tabs.length]);
+  return (
+    <div ref={ref} role="tablist" className={cn('segmented thin-scroll relative inline-flex max-w-full items-center gap-0.5 overflow-x-auto p-0.5', className)}>
+      <span className="segmented-thumb absolute bottom-0.5 left-0 top-0.5" style={{ width: thumb.w, transform: `translateX(${thumb.x}px)` }} aria-hidden />
+      {tabs.map((t) => (
+        <button
+          key={t.value}
+          role="tab"
+          aria-selected={value === t.value}
+          onClick={() => onChange(t.value)}
+          className={cn('relative whitespace-nowrap rounded-[9px] px-4 py-2 text-[13px] font-medium transition-colors sm:px-5', value === t.value ? 'text-ink' : 'text-ink-500 hover:text-ink')}
+        >
+          {t.label}
+          {t.count !== undefined && ` (${t.count})`}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function FilterTabs<T extends string>({
   tabs, value, onChange, variant = 'dark', className, size = 'md',
 }: {
   tabs: TabDef<T>[]; value: T; onChange: (v: T) => void; variant?: 'dark' | 'coral' | 'soft' | 'underline'; className?: string; size?: 'sm' | 'md';
 }) {
-  if (variant === 'soft') {
-    return (
-      <div role="tablist" className={cn('thin-scroll inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-2xl p-1.5 neu-in-sm', className)}>
-        {tabs.map((t) => (
-          <button
-            key={t.value}
-            role="tab"
-            aria-selected={value === t.value}
-            onClick={() => onChange(t.value)}
-            className={cn('relative whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-medium transition sm:px-5', value === t.value ? 'tab-soft-active' : 'text-ink-500 hover:text-ink')}
-          >
-            {t.label}
-            {t.count !== undefined && ` (${t.count})`}
-            {value === t.value && <span className="absolute bottom-1 left-1/2 h-[2px] w-7 -translate-x-1/2 rounded-full bg-coral-500" />}
-          </button>
-        ))}
-      </div>
-    );
-  }
-  if (variant === 'underline') {
-    return (
-      <div role="tablist" className={cn('flex items-center gap-1 overflow-x-auto scrollbar-none', className)}>
-        {tabs.map((t) => (
-          <button
-            key={t.value}
-            role="tab"
-            aria-selected={value === t.value}
-            onClick={() => onChange(t.value)}
-            className={cn('relative whitespace-nowrap rounded-xl px-5 py-2.5 text-sm font-medium transition', value === t.value ? 'tab-soft-active text-ink' : 'text-ink-500 hover:text-ink')}
-          >
-            {t.label}
-            {value === t.value && <span className="absolute bottom-1 left-5 right-5 h-[2px] rounded-full bg-coral-500" />}
-          </button>
-        ))}
-      </div>
-    );
-  }
+  if (variant === 'soft' || variant === 'underline') return <Segmented tabs={tabs} value={value} onChange={onChange} className={className} />;
   return (
     <div role="tablist" className={cn('flex flex-wrap items-center gap-2.5', className)}>
       {tabs.map((t) => {
@@ -206,7 +208,7 @@ export function FilterTabs<T extends string>({
             role="tab"
             aria-selected={selected}
             onClick={() => onChange(t.value)}
-            className={cn('whitespace-nowrap rounded-xl font-medium transition', size === 'sm' ? 'px-4 py-2 text-[13px]' : 'px-5 py-2.5 text-sm', style)}
+            className={cn('whitespace-nowrap rounded-full font-medium transition active:scale-[0.97]', size === 'sm' ? 'px-4 py-2 text-[13px]' : 'px-5 py-2.5 text-sm', style)}
           >
             {t.label}
             {t.count !== undefined && ` (${t.count})`}
@@ -220,14 +222,14 @@ export function FilterTabs<T extends string>({
 /* ------------------------------------------------------------------ inputs */
 export function SearchInput({ value, onChange, placeholder = 'Search…', className }: { value: string; onChange: (v: string) => void; placeholder?: string; className?: string }) {
   return (
-    <label className={cn('neu-in flex h-12 items-center gap-3 !rounded-2xl px-4 text-ink-400', className)}>
+    <label className={cn('search-field flex h-11 items-center gap-2.5 px-3.5 text-ink-400', className)}>
       <Search className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-300"
+        className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-400"
       />
       {value && (
         <button type="button" aria-label="Clear search" onClick={() => onChange('')} className="rounded-full p-0.5 text-ink-400 hover:text-ink">
@@ -254,17 +256,6 @@ export const Textarea = ({ className, ...p }: React.TextareaHTMLAttributes<HTMLT
   <textarea className={cn('field h-auto min-h-[88px] resize-none py-3', className)} {...p} />
 );
 
-export function Select({ className, children, ...p }: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <div className={cn('relative', className)}>
-      <select className="field appearance-none pr-10" {...p}>
-        {children}
-      </select>
-      <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
-    </div>
-  );
-}
-
 export function Checkbox({ checked, onChange, label, disabled }: { checked: boolean; onChange?: (v: boolean) => void; label: string; disabled?: boolean }) {
   return (
     <button
@@ -276,7 +267,7 @@ export function Checkbox({ checked, onChange, label, disabled }: { checked: bool
       onClick={() => onChange?.(!checked)}
       className={cn(
         'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg transition disabled:cursor-not-allowed disabled:opacity-60',
-        checked ? 'bg-gradient-to-b from-[#2fcf8a] to-[#17a368] text-white shadow-[0_3px_8px_rgba(29,157,101,0.35)]' : 'neu-in-sm !rounded-lg',
+        checked ? 'bg-gradient-to-b from-[#3fae90] to-[#248a6c] text-white shadow-[0_3px_8px_rgba(36,138,108,0.35)]' : 'neu-in-sm !rounded-lg',
       )}
     >
       {checked && <Check className="h-4 w-4" strokeWidth={3} />}
@@ -305,25 +296,26 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: {
   }, [open, onClose]);
   if (!open || !mounted) return null;
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#2a2118]/35 p-0 backdrop-blur-[3px] sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="scrim-in fixed inset-0 z-50 flex items-end justify-center bg-[#1d2129]/30 p-0 sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div
         ref={ref}
         role="dialog"
         aria-modal="true"
         aria-labelledby={id}
         tabIndex={-1}
-        className={cn('neu slide-up flex max-h-[92vh] w-full flex-col outline-none !rounded-b-none sm:!rounded-b-[22px]', size === 'sm' ? 'sm:max-w-md' : size === 'lg' ? 'sm:max-w-3xl' : 'sm:max-w-xl')}
+        className={cn('neu modal-panel sheet-in flex max-h-[92vh] w-full flex-col outline-none !rounded-b-none !rounded-t-[28px] sm:!rounded-[24px]', size === 'sm' ? 'sm:max-w-md' : size === 'lg' ? 'sm:max-w-3xl' : 'sm:max-w-xl')}
       >
-        <div className="flex items-center justify-between px-6 pb-3 pt-5">
-          <h2 id={id} className="text-lg font-bold">
+        <span className="mx-auto mt-2 h-[5px] w-9 shrink-0 rounded-full bg-ink-300/70 sm:hidden" aria-hidden />
+        <div className="flex items-center justify-between px-6 pb-3 pt-3 sm:pt-5">
+          <h2 id={id} className="text-[17px] font-semibold">
             {title}
           </h2>
-          <button type="button" aria-label="Close" onClick={onClose} className="btn btn-neu h-9 w-9 !rounded-full">
-            <X className="h-4 w-4" />
+          <button type="button" aria-label="Close" onClick={onClose} className="btn h-[30px] w-[30px] bg-ink-500/10 text-ink-500 hover:bg-ink-500/15">
+            <X className="h-4 w-4" strokeWidth={2.4} />
           </button>
         </div>
         <div className="thin-scroll overflow-y-auto px-6 pb-4">{children}</div>
-        {footer && <div className="flex flex-wrap justify-end gap-3 border-t border-ivory-300/70 px-6 py-4">{footer}</div>}
+        {footer && <div className="flex flex-wrap justify-end gap-3 border-t border-ink/[0.06] px-6 py-4">{footer}</div>}
       </div>
     </div>,
     document.body,
@@ -404,7 +396,7 @@ export function StatCard({
         </p>
       </>
     );
-  const cls = cn('neu block p-5', href && 'transition hover:-translate-y-0.5', className);
+  const cls = cn('neu block p-5', href && 'transition-transform duration-300 active:scale-[0.985]', className);
   return href ? (
     <Link href={href} className={cls}>
       {inner}
@@ -462,13 +454,13 @@ export function DataTable<T>({
   const shown = pageSize ? rows.slice(cur * pageSize, cur * pageSize + pageSize) : rows;
   if (rows.length === 0) return <>{empty ?? <EmptyState title="Nothing here yet" />}</>;
   return (
-    <div className={className}>
+    <div className={cn('data-table', className)}>
       <div className="thin-scroll overflow-x-auto">
-        <table className="w-full min-w-[560px] border-separate border-spacing-y-1.5 text-left text-sm">
+        <table className="w-full min-w-[560px] border-separate border-spacing-0 text-left text-sm">
           <thead>
-            <tr className="text-[12px] font-medium text-ink-400">
+            <tr className="text-[12px] text-ink-400">
               {columns.map((c) => (
-                <th key={c.key} className={cn('px-4 pb-1.5 pt-1 font-medium', c.headClassName)}>
+                <th key={c.key} className={cn('border-b border-ink/[0.07] px-4 pb-2 pt-1 font-medium', c.headClassName)}>
                   {c.header}
                 </th>
               ))}
@@ -479,12 +471,12 @@ export function DataTable<T>({
               <tr
                 key={rowKey(r)}
                 onClick={onRowClick ? () => onRowClick(r) : undefined}
-                className={cn('group bg-white/45 transition', onRowClick && 'cursor-pointer hover:bg-white/80')}
+                className={cn('group transition-colors', onRowClick && 'cursor-pointer hover:bg-ink-500/[0.05]')}
                 tabIndex={onRowClick ? 0 : undefined}
                 onKeyDown={onRowClick ? (e) => e.key === 'Enter' && onRowClick(r) : undefined}
               >
                 {columns.map((c, i) => (
-                  <td key={c.key} className={cn(dense ? 'py-2' : 'py-3', 'px-4 text-ink-700', i === 0 && 'rounded-l-2xl', i === columns.length - 1 && 'rounded-r-2xl', c.className)}>
+                  <td key={c.key} className={cn(dense ? 'py-2' : 'py-3', 'border-b border-ink/[0.05] px-4 text-ink-700', i === 0 && 'rounded-l-xl', i === columns.length - 1 && 'rounded-r-xl', c.className)}>
                     {c.cell(r)}
                   </td>
                 ))}
@@ -512,6 +504,19 @@ export function DataTable<T>({
   );
 }
 
+/* ------------------------------------------------------------------ greeting */
+const partOfDay = (h: number) => (h >= 5 && h < 12 ? 'morning' : h >= 12 && h < 17 ? 'afternoon' : 'evening');
+
+/** Follows the device clock, and changes by itself if the page stays open. */
+export function Greeting({ name }: { name?: string }) {
+  const [part, setPart] = useState(() => partOfDay(new Date().getHours()));
+  useEffect(() => {
+    const t = setInterval(() => setPart(partOfDay(new Date().getHours())), 60000);
+    return () => clearInterval(t);
+  }, []);
+  return <>Good {part}{name ? `, ${name}` : ''}</>;
+}
+
 /* ------------------------------------------------------------------ toast */
 export function useToast() {
   const [msg, setMsg] = useState<string | null>(null);
@@ -522,7 +527,7 @@ export function useToast() {
     t.current = setTimeout(() => setMsg(null), 2600);
   };
   const node = msg ? (
-    <div role="status" className="slide-up fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-2xl bg-ink px-5 py-3 text-sm font-medium text-white shadow-dark">
+    <div role="status" className="slide-up fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-ink px-5 py-3 text-sm font-medium text-white shadow-dark">
       {msg}
     </div>
   ) : null;

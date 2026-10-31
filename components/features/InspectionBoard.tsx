@@ -1,5 +1,7 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { docHref } from '@/components/features/Documents';
 import clsx from 'clsx';
 import { Camera, Download, Expand, ImagePlus, Plus, Share2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -13,18 +15,18 @@ import { CAR_COLOR, CarTopSvg } from './CarTop';
 
 /* ------------------------------------------------------------------ colours */
 export const CONDITION: { key: PointStatus; label: string; color: string }[] = [
-  { key: 'good', label: 'Good', color: '#1d9d65' },
-  { key: 'minor', label: 'Minor Issue', color: '#f5a524' },
-  { key: 'major', label: 'Major Issue', color: '#ef4d2f' },
-  { key: 'unchecked', label: 'Not Checked', color: '#b9b2a7' },
+  { key: 'good', label: 'Good', color: '#248a6c' },
+  { key: 'minor', label: 'Minor Issue', color: '#c9a24a' },
+  { key: 'major', label: 'Major Issue', color: '#d84a27' },
+  { key: 'unchecked', label: 'Not Checked', color: '#b4b7bd' },
 ];
 export const DAMAGE: { key: DamageType; color: string; hollow?: boolean }[] = [
-  { key: 'Scratch', color: '#f26a2e' },
-  { key: 'Dent', color: '#f6c63c' },
-  { key: 'Paint Damage', color: '#2eb872' },
-  { key: 'Cracked', color: '#9a948b', hollow: true },
-  { key: 'Missing', color: '#9bbcff' },
-  { key: 'Custom', color: '#2f6bff' },
+  { key: 'Scratch', color: '#d84a27' },
+  { key: 'Dent', color: '#d9b45f' },
+  { key: 'Paint Damage', color: '#3fa98b' },
+  { key: 'Cracked', color: '#9a9da4', hollow: true },
+  { key: 'Missing', color: '#a9c4dc' },
+  { key: 'Custom', color: '#5f8fb8' },
 ];
 const SAMPLE_PHOTOS = ['bumper', 'bumper-2', 'bumper-3', 'disc-orange', 'disc-dark', 'garage-1'].map((n) => `/assets/photos/${n}.jpg`);
 const ZONES: Zone[] = ['rear-left', 'mid-left', 'wheel-left', 'rear-right', 'mid-right', 'wheel-right'];
@@ -36,7 +38,7 @@ function markerLook(p: InspectionPoint, mode: Mode) {
     const c = CONDITION.find((x) => x.key === p.status)!;
     return { color: c.color, hollow: p.status === 'unchecked' };
   }
-  if (p.status === 'good' || p.status === 'unchecked') return { color: '#b9b2a7', hollow: true };
+  if (p.status === 'good' || p.status === 'unchecked') return { color: '#b4b7bd', hollow: true };
   const d = DAMAGE.find((x) => x.key === p.damage)!;
   return { color: d.color, hollow: !!d.hollow };
 }
@@ -56,7 +58,7 @@ function Marker({ p, mode, selected, onSelect, style, disabled }: { p: Inspectio
       title={p.label}
       style={{
         ...style,
-        background: hollow ? '#fbf6ef' : color,
+        background: hollow ? '#f8f9fa' : color,
         border: hollow ? `2px solid ${color}` : '2px solid #fff',
         boxShadow: hollow ? 'none' : `0 0 0 ${selected ? 5 : 3}px ${color}33, 0 3px 8px ${color}77`,
       }}
@@ -128,8 +130,9 @@ export interface InspectionDraft {
  * Shared inspection board. Normally it edits a saved job (`jobId`); the New Job wizard passes a `draft`
  * instead so the check-in can be recorded before the job exists.
  */
-export function InspectionBoard({ jobId = '', mode, canEdit = true, layout, draft, carKey }: { jobId?: string; mode: Mode; canEdit?: boolean; layout?: 'split' | 'stack'; draft?: InspectionDraft; carKey?: CarKey }) {
+export function InspectionBoard({ jobId = '', mode, canEdit = true, layout, draft, carKey, doneHref }: { jobId?: string; mode: Mode; canEdit?: boolean; layout?: 'split' | 'stack'; draft?: InspectionDraft; carKey?: CarKey; doneHref?: string }) {
   const db = useDb();
+  const router = useRouter();
   const savedJob = db.jobs.find((j) => j.id === jobId);
   const job: { id: string; points: InspectionPoint[]; photos: string[] } | undefined = draft ? { id: '', points: draft.points, photos: [] } : savedJob;
   const color = CAR_COLOR[carKey ?? (savedJob ? vehicleOf(db, savedJob.vehicleId)?.carKey : undefined) ?? 'bmw3'];
@@ -153,6 +156,11 @@ export function InspectionBoard({ jobId = '', mode, canEdit = true, layout, draf
       setSaved(false);
     }
   }, [point?.id, point?.notes, point?.severity]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const savePoint = () => {
+    if (!point) return;
+    patchPoint(point.id, { severity, notes, status: point.status === 'good' ? 'good' : point.status === 'unchecked' || severity === 'Minor' ? 'minor' : 'major' });
+  };
 
   const lay = layout ?? (mode === 'admin' ? 'split' : 'stack');
   const counts = useMemo(() => {
@@ -192,7 +200,7 @@ export function InspectionBoard({ jobId = '', mode, canEdit = true, layout, draf
             className={clsx('flex items-center gap-2.5 rounded-lg px-1 text-[13px] transition', point.damage === d.key && point.status !== 'unchecked' && point.status !== 'good' ? 'font-semibold text-ink' : 'text-ink-500')}
             aria-pressed={point.damage === d.key}
           >
-            <span className="h-3.5 w-3.5 rounded-full" style={d.hollow ? { border: `2px solid ${d.color}`, background: '#fbf6ef' } : { background: d.color, boxShadow: `0 0 0 3px ${d.color}2e` }} />
+            <span className="h-3.5 w-3.5 rounded-full" style={d.hollow ? { border: `2px solid ${d.color}`, background: '#f8f9fa' } : { background: d.color, boxShadow: `0 0 0 3px ${d.color}2e` }} />
             {d.key}
           </button>
         </li>
@@ -203,7 +211,7 @@ export function InspectionBoard({ jobId = '', mode, canEdit = true, layout, draf
     <ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px] text-ink-600" aria-label="Condition legend">
       {CONDITION.map((c) => (
         <li key={c.key} className="flex items-center gap-2">
-          <span className="h-3 w-3 rounded-full" style={c.key === 'unchecked' ? { border: `2px solid ${c.color}`, background: '#fbf6ef' } : { background: c.color, boxShadow: `0 0 0 3px ${c.color}33` }} />
+          <span className="h-3 w-3 rounded-full" style={c.key === 'unchecked' ? { border: `2px solid ${c.color}`, background: '#f8f9fa' } : { background: c.color, boxShadow: `0 0 0 3px ${c.color}33` }} />
           {c.label}
         </li>
       ))}
@@ -308,13 +316,14 @@ export function InspectionBoard({ jobId = '', mode, canEdit = true, layout, draf
           disabled={!canEdit}
           className="!h-12"
           onClick={() => {
-            patchPoint(point.id, { severity, notes, status: point.status === 'good' || point.status === 'unchecked' ? 'minor' : severity === 'Minor' ? 'minor' : 'major' });
+            savePoint();
             setSaved(true);
             toast.show('Inspection saved');
           }}
         >
-          {saved ? 'Saved ✓' : 'Save'}
+          {saved ? 'Saved ✓' : doneHref ? 'Save, mark more' : 'Save'}
         </Button>
+        {doneHref && <Button size="lg" disabled={!canEdit} className="col-span-2" onClick={() => { savePoint(); router.push(doneHref); }}>Save and back to job</Button>}
       </div>
     </Card>
   );
@@ -343,7 +352,7 @@ export function InspectionBoard({ jobId = '', mode, canEdit = true, layout, draf
                 ),
               )}
             </div>
-            <button type="button" onClick={addPhoto} disabled={!canEdit} className="flex h-[70px] items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#b8caff] bg-[#eef3ff] text-sm font-semibold text-info-strong transition hover:bg-[#e4ecff] disabled:opacity-50">
+            <button type="button" onClick={addPhoto} disabled={!canEdit} className="flex h-[70px] items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#bcd0e2] bg-[#eef3f8] text-sm font-semibold text-info-strong transition hover:bg-[#e6eff6] disabled:opacity-50">
               <Plus className="h-4 w-4" /> Add Photo
             </button>
           </div>
@@ -382,6 +391,7 @@ export function InspectionBoard({ jobId = '', mode, canEdit = true, layout, draf
           aria-label="Notes"
         />
       </Card>
+      {doneHref && <Button size="lg" disabled={!canEdit} className="w-full" onClick={() => { if (notes !== point.notes) patchPoint(point.id, { notes }); router.push(doneHref); }}>Save and back to job</Button>}
     </div>
   );
 
@@ -482,9 +492,9 @@ export function InspectionBoard({ jobId = '', mode, canEdit = true, layout, draf
           {!draft && <button aria-label="Copy link" title="Share" className="btn btn-neu h-11 w-11 !rounded-xl" onClick={() => { navigator.clipboard?.writeText(window.location.href); toast.show('Link copied'); }}>
             <Share2 className="h-[18px] w-[18px]" />
           </button>}
-          {!draft && <button aria-label="Download report" title="Print / save as PDF" className="btn btn-neu h-11 w-11 !rounded-xl" onClick={() => window.print()}>
+          {!draft && savedJob && <a aria-label="Download report" title="Download inspection report" href={docHref('inspection', savedJob.trackingToken)} target="_blank" rel="noreferrer" className="btn btn-neu h-11 w-11 !rounded-xl">
             <Download className="h-[18px] w-[18px]" />
-          </button>}
+          </a>}
           <button aria-label="Fullscreen" title="Fullscreen" className="btn btn-neu h-11 w-11 !rounded-xl" onClick={() => (document.fullscreenElement ? document.exitFullscreen() : root.current?.requestFullscreen?.())}>
             <Expand className="h-[18px] w-[18px]" />
           </button>

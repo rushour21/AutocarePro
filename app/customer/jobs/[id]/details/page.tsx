@@ -74,7 +74,7 @@ export default function CustomerJobDetails() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img key={p} src={p} alt="" className="aspect-[1.2] w-full rounded-2xl object-cover shadow-neu-xs" />
                 ))}
-                {photos.length > 3 ? <button onClick={() => setTab('photos')} className="flex aspect-[1.2] items-center justify-center rounded-2xl bg-[#6b6a68] text-xl font-bold text-white shadow-neu-xs">+{photos.length - 3}</button> : photos.length === 0 && <div className="col-span-2"><EmptyState title="No photos yet" /></div>}
+                {photos.length > 3 ? <button onClick={() => setTab('photos')} className="flex aspect-[1.2] items-center justify-center rounded-2xl bg-[#6b6e75] text-xl font-bold text-white shadow-neu-xs">+{photos.length - 3}</button> : photos.length === 0 && <div className="col-span-2"><EmptyState title="No photos yet" /></div>}
               </div>
             </Card>
           )}

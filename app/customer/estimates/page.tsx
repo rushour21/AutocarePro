@@ -6,7 +6,7 @@ import { TopBar } from '@/components/layout/AppShell';
 import { EmptyState, PageHeader, StatusBadge, VehicleImage } from '@/components/ui';
 import { visibleEstimates } from '@/lib/access';
 import { useSession } from '@/lib/auth';
-import { estimateTotals, inr, vehicleName, vehicleOf } from '@/lib/format';
+import { estimateTotals, quotedItems, inr, vehicleName, vehicleOf } from '@/lib/format';
 import { useDb } from '@/lib/store';
 
 const TONE = { 'Awaiting Approval': 'amber', Approved: 'green', Rejected: 'red', Draft: 'gray' } as const;
@@ -30,7 +30,7 @@ export default function CustomerEstimates() {
                 <Link href={`/customer/estimates/${e.id}`} className="neu flex items-center gap-5 !rounded-[22px] px-5 py-4 transition hover:-translate-y-0.5">
                   {v && <VehicleImage carKey={v.carKey} className="h-14 w-28" />}
                   <span className="flex-1"><span className="block font-bold">{e.id}</span><span className="block text-sm text-ink-500">{vehicleName(v)} · {j?.service}</span></span>
-                  <span className="text-right"><span className="block font-bold">{inr(estimateTotals(e.items).total)}</span><StatusBadge tone={TONE[e.status]} size="sm">{e.status}</StatusBadge></span>
+                  <span className="text-right"><span className="block font-bold">{inr(estimateTotals(quotedItems(e)).total)}</span><StatusBadge tone={TONE[e.status]} size="sm">{e.status}</StatusBadge></span>
                   <ChevronRight className="h-5 w-5 text-ink-300" />
                 </Link>
               </li>

@@ -11,17 +11,17 @@ import { vehicleOf } from '@/lib/format';
 import { useDb } from '@/lib/store';
 
 const MARK: Record<PointStatus, { c: string; label: string }> = {
-  good: { c: '#1d9d65', label: 'Good' },
-  minor: { c: '#f5a524', label: 'Minor Issue' },
-  major: { c: '#ef4d2f', label: 'Major Issue' },
-  unchecked: { c: '#b9b2a7', label: 'Not checked' },
+  good: { c: '#248a6c', label: 'Good' },
+  minor: { c: '#c9a24a', label: 'Minor Issue' },
+  major: { c: '#d84a27', label: 'Major Issue' },
+  unchecked: { c: '#b4b7bd', label: 'Not checked' },
 };
 
 function FindingRow({ f }: { f: Finding }) {
   const good = f.state === 'good';
   return (
     <li className="neu-row flex items-center gap-4 px-4 py-3.5">
-      <span className={clsx('flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white', good ? 'bg-gradient-to-b from-[#2fcf8a] to-[#17a368] shadow-[0_3px_8px_rgba(29,157,101,0.35)]' : f.state === 'warn' ? 'bg-gradient-to-b from-[#ffbf4a] to-[#ee8a12]' : 'bg-gradient-to-b from-[#ff8a5c] to-[#ef4d2f] shadow-coral')}>
+      <span className={clsx('flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white', good ? 'bg-gradient-to-b from-[#3fae90] to-[#248a6c] shadow-[0_3px_8px_rgba(36,138,108,0.35)]' : f.state === 'warn' ? 'bg-gradient-to-b from-[#d9b45f] to-[#c9a24a]' : 'bg-gradient-to-b from-[#e4633f] to-[#d84a27] shadow-coral')}>
         {good ? <Check className="h-[18px] w-[18px]" strokeWidth={3} /> : <CircleAlert className="h-[18px] w-[18px]" />}
       </span>
       <div className="min-w-0">
@@ -92,7 +92,7 @@ export default function ShareInspection() {
         <ul className="space-y-2.5">
           {job.checklist.map((c) => (
             <li key={c.id} className="neu-row flex items-center gap-4 px-4 py-3.5 text-sm">
-              <span className={clsx('flex h-7 w-7 items-center justify-center rounded-full', c.done ? 'bg-gradient-to-b from-[#2fcf8a] to-[#17a368] text-white' : 'neu-in-sm !rounded-full')}>{c.done && <Check className="h-4 w-4" strokeWidth={3} />}</span>
+              <span className={clsx('flex h-7 w-7 items-center justify-center rounded-full', c.done ? 'bg-gradient-to-b from-[#3fae90] to-[#248a6c] text-white' : 'neu-in-sm !rounded-full')}>{c.done && <Check className="h-4 w-4" strokeWidth={3} />}</span>
               <span className="flex-1">{c.label}</span>
               <span className={c.done ? 'font-medium text-ok' : 'text-ink-400'}>{c.done ? 'Done' : 'Pending'}</span>
             </li>

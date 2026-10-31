@@ -64,15 +64,15 @@ export default function VehiclesPage() {
               const d = serviceDueLabel(v.serviceInDays);
               const owner = db.customers.find((c) => c.id === v.customerId);
               return (
-                <li key={v.id} className="neu-row flex items-center gap-5 px-5 py-3.5">
-                  <VehicleImage carKey={v.carKey} className="h-12 w-24" />
+                <li key={v.id} className="neu-row flex items-center gap-3 px-3.5 py-3 sm:gap-5 sm:px-5 sm:py-3.5">
+                  <VehicleImage carKey={v.carKey} className="h-10 w-16 shrink-0 sm:h-12 sm:w-24" />
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold">{vehicleName(v)}</p>
-                    <p className="text-sm text-ink-400">{v.reg}</p>
+                    <p className="truncate font-bold">{vehicleName(v)}</p>
+                    <p className="truncate text-sm text-ink-400">{v.reg}<span className="block sm:hidden">{km(v.odometer)}</span></p>
                   </div>
                   <p className="hidden text-sm text-ink-500 sm:block">{owner?.name}</p>
-                  <p className="w-24 text-right text-sm font-medium text-ink-700">{km(v.odometer)}</p>
-                  <div className="w-[124px] text-right">{d ? <StatusBadge tone={d.tone} className="w-full justify-center !whitespace-normal text-center leading-tight">{d.label}</StatusBadge> : <span className="text-xs text-ink-300">—</span>}</div>
+                  <p className="hidden w-24 text-right text-sm font-medium text-ink-700 sm:block">{km(v.odometer)}</p>
+                  <div className="w-[92px] shrink-0 text-right sm:w-[124px]">{d ? <StatusBadge tone={d.tone} className="w-full justify-center !whitespace-normal text-center leading-tight">{d.label}</StatusBadge> : <span className="text-xs text-ink-300">—</span>}</div>
                 </li>
               );
             })}

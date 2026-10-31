@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowUp } from 'lucide-react';
 import { TopBar } from '@/components/layout/AppShell';
 import { BarChart, Donut, LineChart } from '@/components/features/Charts';
 import { Card, Select } from '@/components/ui';
@@ -12,15 +11,34 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
 const REVENUE = [150000, 180000, 220000, 210000, 240000, 245000];
 const JOBS = [3, 3, 4, 3, 4, 4, 3, 5, 4, 5, 5, 5]; // fortnightly, sums to 48
 const KPI: Record<number, { jobs: number; customers: number }> = { 3: { jobs: 27, customers: 11 }, 6: { jobs: 48, customers: 18 } };
-const GROWTH = [2, 4, 7, 9, 13, 18];
+const NEW_CUSTOMERS = [2, 2, 3, 2, 4, 5];
+const STEPS_PER_MONTH = 10;
 const SERVICES = [
-  { label: 'General Service', value: 35, color: '#f26a2e' },
-  { label: 'Modification', value: 20, color: '#f6c63c' },
-  { label: 'Detailing & PPF', value: 15, color: '#8e9cf2' },
-  { label: 'Repairs', value: 10, color: '#4aa8f0' },
-  { label: 'Inspection', value: 7, color: '#8b6bf0' },
-  { label: 'Other', value: 5, color: '#2eb872' },
+  { label: 'General Service', value: 35, color: '#d84a27' },
+  { label: 'Modification', value: 20, color: '#78a2c6' },
+  { label: 'Detailing & PPF', value: 15, color: '#c9a24a' },
+  { label: 'Repairs', value: 10, color: '#248a6c' },
+  { label: 'Inspection', value: 7, color: '#a9c4dc' },
+  { label: 'Other', value: 5, color: '#b4b7bd' },
 ];
+
+const signed = (v: number) => `${v > 0 ? '+' : ''}${Math.round(v * 10) / 10}%`;
+
+// Expands monthly totals into a seeded daily-style walk, as % against the period average.
+function trend(monthly: number[], seed: number, swing: number) {
+  const avg = monthly.reduce((a, b) => a + b, 0) / monthly.length;
+  const pct = monthly.map((v) => (v / avg - 1) * 100);
+  let walk = 0;
+  let state = seed;
+  return Array.from({ length: pct.length * STEPS_PER_MONTH }, (_, i) => {
+    const t = i / STEPS_PER_MONTH;
+    const from = Math.min(Math.floor(t), pct.length - 1);
+    const to = Math.min(from + 1, pct.length - 1);
+    state = (state * 16807) % 2147483647;
+    walk = walk * 0.78 + ((state / 2147483647) * 2 - 1) * swing;
+    return pct[from] + (pct[to] - pct[from]) * (t - from) + walk;
+  });
+}
 
 function Kpi({ label, value, delta }: { label: string; value: string; delta: string }) {
   return (
@@ -28,7 +46,7 @@ function Kpi({ label, value, delta }: { label: string; value: string; delta: str
       <p className="text-sm text-ink-600">{label}</p>
       <p className="mt-2 flex items-baseline gap-4 text-[30px] font-bold leading-none">
         {value}
-        <span className="flex items-center gap-0.5 text-sm font-semibold text-ok"><ArrowUp className="h-3.5 w-3.5" />{delta}</span>
+        <span className="text-sm font-semibold text-ok">+{delta}</span>
       </p>
     </Card>
   );
@@ -40,6 +58,14 @@ export default function ReportsPage() {
   const rev = REVENUE.slice(-n);
   const months = MONTHS.slice(-n);
   const jobs = JOBS.slice(-n * 2);
+  const jobsByMonth = months.map((_, i) => jobs[i * 2] + jobs[i * 2 + 1]);
+  const trends = [
+    { label: 'Revenue', color: '#d84a27', values: trend(rev, 11, 3.2) },
+    { label: 'Jobs', color: '#78a2c6', values: trend(jobsByMonth, 23, 3.2) },
+    { label: 'New Customers', color: '#c2c5cb', values: trend(NEW_CUSTOMERS.slice(-n), 37, 4.4) },
+  ];
+  const dayLabels = trends[0].values.map((_, i) => `${months[Math.floor(i / STEPS_PER_MONTH)]} ${(i % STEPS_PER_MONTH) * 3 + 1}`);
+  const monthTicks = months.map((label, i) => ({ index: i * STEPS_PER_MONTH, label }));
   return (
     <>
       <TopBar showUser />
@@ -59,11 +85,11 @@ export default function ReportsPage() {
         <div className="space-y-5">
           <Card className="p-5">
             <h2 className="mb-4 text-base font-bold">Revenue Trend</h2>
-            <BarChart data={rev.map((v, i) => ({ label: months[i], value: v }))} format={inr} highlight={Math.min(3, rev.length - 1)} />
+            <BarChart data={rev.map((v, i) => ({ label: months[i], value: v }))} format={inr} highlight={rev.length - 3} />
           </Card>
           <Card className="p-5">
             <h2 className="mb-4 text-base font-bold">Monthly Jobs</h2>
-            <BarChart data={jobs.map((v, i) => ({ label: i % 2 === 0 ? months[i / 2] : '', value: v }))} format={(v) => `${v} jobs`} height={150} />
+            <BarChart data={jobs.map((v, i) => ({ label: i % 2 === 0 ? months[i / 2] : '', value: v }))} format={(v) => `${v} jobs`} height={190} highlight={jobs.length - 1} />
           </Card>
         </div>
         <div className="space-y-5">
@@ -73,14 +99,15 @@ export default function ReportsPage() {
               <Donut slices={SERVICES} center="48" sub="Jobs" />
               <ul className="min-w-[180px] flex-1 space-y-2.5">
                 {SERVICES.map((s) => (
-                  <li key={s.label} className="flex items-center gap-3 text-sm"><span className="h-3 w-3 rounded-full" style={{ background: s.color }} /><span className="flex-1 text-ink-600">{s.label}</span><span className="font-medium text-ink-700">{s.value}%</span></li>
+                  <li key={s.label} className="flex items-center gap-3 text-sm"><span className="h-2.5 w-2.5 rounded-full border-2" style={{ borderColor: s.color }} /><span className="flex-1 text-ink-600">{s.label}</span><span className="font-medium text-ink-700">{s.value}%</span></li>
                 ))}
               </ul>
             </div>
           </Card>
           <Card className="p-5">
-            <h2 className="mb-2 text-base font-bold">Customer Growth</h2>
-            <LineChart points={GROWTH.slice(-n).map((v, i) => ({ label: months[i], value: v }))} format={(v) => `${v} customers`} height={160} />
+            <h2 className="text-base font-bold">Trends</h2>
+            <p className="mb-3 text-xs text-ink-500">Against the period average</p>
+            <LineChart series={trends} labels={dayLabels} ticks={monthTicks} format={signed} ariaLabel="Revenue, jobs and new customers against the period average" />
           </Card>
         </div>
       </div>

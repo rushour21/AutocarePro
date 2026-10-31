@@ -3,13 +3,16 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
-import { ChevronLeft, Download, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronLeft, Pencil, Plus, Trash2 } from 'lucide-react';
 import { TopBar } from '@/components/layout/AppShell';
+import { DocLink } from '@/components/features/Documents';
+import { BeforeAfter } from '@/components/features/BeforeAfter';
 import { EstimateTable, EstimateTotals } from '@/components/features/EstimateView';
+import { RepairBrief } from '@/components/features/insurance/RepairDetails';
 import { NoAccess } from '@/components/features/NoAccess';
 import { Button, Card, Input, Modal, Select, StatusBadge, VehicleImage, useToast } from '@/components/ui';
 import { sendEstimate, updateEstimate } from '@/lib/actions';
-import { vehicleName, vehicleOf } from '@/lib/format';
+import { itemApproval, pendingItems, quotedItems, vehicleName, vehicleOf } from '@/lib/format';
 import { useDb } from '@/lib/store';
 import type { EstimateItem } from '@/lib/types';
 
@@ -35,20 +38,23 @@ export default function AdminEstimatePage() {
           <h1 className="text-[24px] font-bold">Estimate {est.id}</h1>
           <StatusBadge tone={TONE[est.status]} dot size="lg" className="ml-auto">{est.status}</StatusBadge>
         </div>
-        <Card className="mb-4 flex items-center gap-4 p-4">
+        <Card className="mb-4 flex flex-wrap items-center gap-4 p-4">
           {v && <VehicleImage carKey={v.carKey} className="h-14 w-28" />}
           <div className="flex-1">
             <p className="font-bold">{vehicleName(v)}</p>
             <p className="text-sm text-ink-400">{v?.reg}</p>
           </div>
-          <Button variant="blue" href={`/admin/jobs/${job.id}/inspection`} className="!h-12 px-6 font-semibold">View Inspection</Button>
+          <Button variant="neu" href={`/admin/jobs/${job.id}`} className="!h-12 px-5 font-semibold">View Job</Button>
+          <Button variant="blue" href={`/admin/jobs/${job.id}/inspection`} className="!h-12 px-5 font-semibold">View Inspection</Button>
         </Card>
-        <EstimateTable items={est.items} columns={['category', 'type']} />
-        <EstimateTotals items={est.items} className="mt-4" />
+        <Card className="mb-4 p-5 text-sm"><h2 className="mb-3 text-base font-bold">Repair details</h2><RepairBrief job={job} /></Card>
+        <Card className="mb-4 p-5"><h2 className="mb-3 text-base font-bold">Before and after photos</h2><BeforeAfter job={job} by="Admin" onError={toast.show} /></Card>
+        <EstimateTable items={est.items} columns={['category', 'type']} statusOf={(i) => itemApproval(est, i)} />
+        <EstimateTotals items={quotedItems(est)} className="mt-4" />
         <div className="mt-5 grid grid-cols-[auto_auto_1fr] gap-3">
           <Button variant="neu" size="lg" onClick={() => { setRows(structuredClone(est.items)); setEdit(true); }}><Pencil className="h-4 w-4" /> Edit</Button>
-          <Button variant="neu" size="lg" onClick={() => window.print()}><Download className="h-4 w-4" /> Download PDF</Button>
-          <Button size="lg" disabled={est.status === 'Approved' || est.status === 'Rejected'} onClick={() => { sendEstimate(est.id); toast.show('Estimate sent to the customer'); }}>
+          <DocLink kind="estimate" docKey={job.trackingToken} className="btn btn-neu h-12 px-6 text-[15px]">Download PDF</DocLink>
+          <Button size="lg" disabled={pendingItems(est).length === 0} onClick={() => { sendEstimate(est.id); toast.show('Estimate sent to the customer'); }}>
             Send to Customer
           </Button>
         </div>
@@ -71,7 +77,7 @@ export default function AdminEstimatePage() {
               <button aria-label="Remove line" className="btn btn-neu h-10 w-10 !rounded-full text-bad" onClick={() => setRows(rows.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></button>
             </div>
           ))}
-          <Button variant="blue" size="sm" onClick={() => setRows([...rows, { id: `i${Date.now()}`, name: '', category: 'Parts', type: 'Parts', amount: 0 }])}><Plus className="h-4 w-4" /> Add line</Button>
+          <Button variant="blue" size="sm" onClick={() => setRows([...rows, { id: `i${Date.now()}`, name: '', category: 'Parts', type: 'Parts', amount: 0, approval: 'Pending', extra: true }])}><Plus className="h-4 w-4" /> Add line</Button>
         </div>
       </Modal>
       {toast.node}

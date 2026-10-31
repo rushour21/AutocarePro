@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Suspense, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus, X } from 'lucide-react';
@@ -72,7 +73,8 @@ function JobsInner() {
         }
       />
       <FilterTabs
-        className="mb-5"
+        className="mb-4"
+        variant="soft"
         value={view}
         onChange={setView}
         tabs={[
@@ -82,7 +84,31 @@ function JobsInner() {
         ]}
       />
       {view === 'board' && <JobBoard db={db} jobs={jobs} onToast={toast.show} />}
-      {view === 'list' && <DataTable columns={cols} rows={jobs} rowKey={(j) => j.id} onRowClick={(j) => router.push(`/admin/jobs/${j.id}`)} pageSize={10} />}
+      {view === 'list' && (
+        <>
+          <div className="hidden md:block">
+            <DataTable columns={cols} rows={jobs} rowKey={(j) => j.id} onRowClick={(j) => router.push(`/admin/jobs/${j.id}`)} pageSize={10} />
+          </div>
+          <ul className="space-y-2 md:hidden">
+            {jobs.map((j) => {
+              const v = vehicleOf(db, j.vehicleId);
+              return (
+                <li key={j.id}>
+                  <Link href={`/admin/jobs/${j.id}`} className="flex items-center gap-3 rounded-[18px] bg-[#fbfbfc] p-3 shadow-neu-xs active:scale-[0.99]">
+                    {v && <VehicleImage carKey={v.carKey} className="h-9 w-14 shrink-0" />}
+                    <span className="min-w-0 flex-1 leading-tight">
+                      <span className="block truncate text-sm font-semibold">{vehicleName(v)}</span>
+                      <span className="block truncate text-xs text-ink-500">#{j.id} · {customerOf(db, j.customerId)?.name}</span>
+                      <span className={j.dueIn < 0 ? 'mt-0.5 block truncate text-[11px] font-medium text-bad' : 'mt-0.5 block truncate text-[11px] text-ink-500'}>{j.dueLabel}</span>
+                    </span>
+                    <StatusBadge tone={STAGE_TONE[j.stage]} size="sm">{STAGE_LABEL[j.stage]}</StatusBadge>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
       {view === 'calendar' && <AdminCalendarView />}
       {toast.node}
     </>

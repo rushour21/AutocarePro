@@ -4,19 +4,18 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { CalendarClock, ChevronLeft, MessageCircle, Phone, Plus } from 'lucide-react';
-import { JobStepper, TaskList } from '@/components/features/JobProgress';
+import { CheckInSummary, JobFlowPanel } from '@/components/features/JobFlowPanel';
+import { AllTasks, CurrentTasks, JobStepper } from '@/components/features/JobProgress';
 import { NoAccess } from '@/components/features/NoAccess';
 import { TopBar } from '@/components/layout/AppShell';
 import { Avatar, Button, Card, EmptyState, FilterTabs, Input, Modal, Select, StatusBadge, Textarea, VehicleImage, useToast } from '@/components/ui';
-import { addNote, addTask, requestPart, setJobStage } from '@/lib/actions';
+import { addNote, addTask, requestPart } from '@/lib/actions';
 import { getJobFor } from '@/lib/access';
 import { useSession } from '@/lib/auth';
-import { customerOf, km, STAGE_LABEL, userOf, vehicleName, vehicleOf } from '@/lib/format';
+import { customerOf, km, STAGE_LABEL, STAGE_TONE, userOf, vehicleName, vehicleOf } from '@/lib/format';
 import { useDb } from '@/lib/store';
-import type { Stage } from '@/lib/types';
 
 type Tab = 'overview' | 'tasks' | 'inspection' | 'parts' | 'notes';
-const MOVE: Stage[] = ['inspection', 'diagnostics', 'in_repair', 'quality_check', 'ready'];
 const PARTS = ['Brake Pad (Front)', 'Brake Disc (Front)', 'Engine Oil SW30', 'Air Filter', 'Spark Plug', 'AC Filter', 'Cabin Filter', 'Oil Filter'];
 
 function Inner() {
@@ -47,12 +46,11 @@ function Inner() {
     <>
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Link href="/employee/jobs" className="btn btn-neu h-11 gap-2 px-4 text-sm"><ChevronLeft className="h-4 w-4" /> Back to Jobs</Link>
-        <div className="ml-auto flex items-center gap-2">
-          <label className="sr-only" htmlFor="stage">Job status</label>
-          <Select id="stage" value={job.stage} onChange={(e) => { setJobStage(job.id, e.target.value as Stage, user.name); toast.show(`Status: ${STAGE_LABEL[e.target.value as Stage]}`); }} className="w-[190px] [&_select]:!bg-ok-soft [&_select]:font-semibold [&_select]:text-ok-strong">
-            {MOVE.concat(job.stage === 'pending' ? ['pending'] : []).map((s) => <option key={s} value={s}>{STAGE_LABEL[s]}</option>)}
-          </Select>
-        </div>
+        <StatusBadge tone={STAGE_TONE[job.stage]} dot size="lg" className="ml-auto">{STAGE_LABEL[job.stage]}</StatusBadge>
+      </div>
+      <div className="mb-5 space-y-4">
+        <JobFlowPanel job={job} by={user.name} staff="tech" onToast={toast.show} />
+        <CheckInSummary job={job} />
       </div>
       <div className="grid gap-5 xl:grid-cols-[1.2fr_1fr]">
         <div>
@@ -95,9 +93,9 @@ function Inner() {
 
       {tab === 'overview' && (
         <div className="space-y-5">
-          <Card className="p-5"><h2 className="mb-4 font-bold">Job Progress</h2><JobStepper job={job} /></Card>
+          <Card className="p-5"><h2 className="mb-4 font-bold">Job Progress</h2><JobStepper job={job} currentStyle="active" /></Card>
           <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-            <Card className="p-5"><h2 className="mb-3 font-bold">Service Details</h2><TaskList jobId={job.id} tasks={job.tasks} canEdit /></Card>
+            <Card className="p-5"><CurrentTasks job={job} canEdit /></Card>
             <Card className="p-5">
               <h2 className="mb-3 font-bold">Quick Actions</h2>
               <div className="space-y-3">
@@ -112,7 +110,7 @@ function Inner() {
 
       {tab === 'tasks' && (
         <Card className="p-5">
-          <TaskList jobId={job.id} tasks={job.tasks} canEdit />
+          <AllTasks job={job} canEdit />
           <form className="mt-5 flex gap-3" onSubmit={(e) => { e.preventDefault(); addTask(job.id, task); setTask(''); }}>
             <Input value={task} onChange={(e) => setTask(e.target.value)} placeholder="Add a task…" aria-label="New task" />
             <Button type="submit" disabled={!task.trim()}><Plus className="h-4 w-4" /> Add</Button>

@@ -29,7 +29,7 @@ export default function AdminInspectionPage() {
           <p className="text-sm text-ink-500">#{job.id} · {vehicleName(vehicleOf(db, job.vehicleId))}</p>
         </div>
       </div>
-      <InspectionBoard jobId={job.id} mode="admin" canEdit />
+      <InspectionBoard jobId={job.id} mode="admin" canEdit doneHref={`/admin/jobs/${job.id}`} />
     </>
   );
 }

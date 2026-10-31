@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, MoreVertical, Receipt } from 'lucide-react';
+import { Receipt } from 'lucide-react';
+import { DocLink } from '@/components/features/Documents';
 import { TopBar } from '@/components/layout/AppShell';
 import { Button, EmptyState, FilterTabs, Modal, PageHeader, StatusBadge, VehicleImage, useToast } from '@/components/ui';
 import { EstimateTotals } from '@/components/features/EstimateView';
@@ -41,13 +42,13 @@ export default function CustomerInvoices() {
                 <div className="min-w-0 flex-1"><p className="font-bold">{i.id}</p><p className="text-sm text-ink-500">{vehicleName(v)}</p><p className="text-xs text-ink-400">{i.date}</p></div>
                 <div className="text-right"><p className="font-bold">{inr(i.amount)}</p><StatusBadge tone={i.status === 'Paid' ? 'green' : i.status === 'Pending' ? 'amber' : 'gray'} size="sm">{i.status}</StatusBadge></div>
                 <Button variant="soft" size="sm" onClick={() => setSel(i.id)}>View</Button>
-                <button aria-label="More actions" className="btn btn-neu h-9 w-9 !rounded-xl" onClick={() => window.print()} title="Print / download"><MoreVertical className="h-4 w-4" /></button>
+                <DocLink kind="invoice" docKey={i.id} className="btn btn-neu h-9 px-3 text-[13px]">PDF</DocLink>
               </li>
             );
           })}
         </ul>
       )}
-      <Modal open={!!cur} onClose={() => setSel(null)} title={cur ? `Invoice ${cur.id}` : ''} footer={cur && <><Button variant="neu" onClick={() => window.print()}><Download className="h-4 w-4" /> Download</Button>{cur.status === 'Pending' && <Button onClick={() => { payInvoice(cur.id); toast.show('Payment received — thank you!'); }}>Pay {inr(cur.amount)}</Button>}</>}>
+      <Modal open={!!cur} onClose={() => setSel(null)} title={cur ? `Invoice ${cur.id}` : ''} footer={cur && <><DocLink kind="invoice" docKey={cur.id} className="btn btn-neu h-11 px-5 text-sm">Invoice</DocLink>{cur.status === 'Paid' && <DocLink kind="receipt" docKey={cur.id} className="btn btn-neu h-11 px-5 text-sm">Receipt</DocLink>}{cur.status === 'Pending' && <Button onClick={() => { payInvoice(cur.id); toast.show('Payment received — thank you!'); }}>Pay {inr(cur.amount)}</Button>}</>}>
         {cur && (
           <div className="space-y-4">
             <div className="flex items-center gap-4">{cv && <VehicleImage carKey={cv.carKey} className="h-12 w-24" />}<div><p className="font-bold">{vehicleName(cv)}</p><p className="text-sm text-ink-500">{cur.date}</p></div><StatusBadge className="ml-auto" tone={cur.status === 'Paid' ? 'green' : 'amber'}>{cur.status}</StatusBadge></div>

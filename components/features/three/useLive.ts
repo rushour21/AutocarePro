@@ -6,8 +6,8 @@ import { useDb } from '@/lib/store';
 import type { Bay, Stage, WorkshopLayout } from '@/lib/types';
 import type { BayLive } from './WorkshopScene3D';
 
-export const STAGE_COLOR: Record<Stage, string> = { pending: '#e5482d', inspection: '#2f6bff', diagnostics: '#7456f0', in_repair: '#f26a2e', quality_check: '#ee8a12', ready: '#1d9d65', delivered: '#1d9d65' };
-export const STATUS_COLOR: Record<BayStatus, string> = { in_use: '#f26a2e', available: '#1d9d65', maintenance: '#e5482d', reserved: '#7456f0', inactive: '#8d8d90' };
+export const STAGE_COLOR: Record<Stage, string> = { pending: '#b93a1c', inspection: '#5f8fb8', diagnostics: '#7d86b5', in_repair: '#d84a27', quality_check: '#c9a24a', ready: '#248a6c', delivered: '#248a6c' };
+export const STATUS_COLOR: Record<BayStatus, string> = { in_use: '#d84a27', available: '#248a6c', maintenance: '#b93a1c', reserved: '#7d86b5', inactive: '#8d8d90' };
 
 /** Who is in which bay, derived from jobs. `layout` may be a draft: occupancy is looked up by bay id. */
 export function useBayLive(layout: WorkshopLayout, opts?: { hideCustomerInfoFor?: (jobId: string) => boolean }) {

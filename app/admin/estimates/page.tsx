@@ -6,7 +6,7 @@ import { Plus } from 'lucide-react';
 import { TopBar } from '@/components/layout/AppShell';
 import { Button, DataTable, FilterTabs, Modal, PageHeader, Select, StatusBadge, VehicleImage, useToast, type Column } from '@/components/ui';
 import { createEstimate } from '@/lib/actions';
-import { customerOf, estimateTotals, inr, vehicleName, vehicleOf } from '@/lib/format';
+import { customerOf, estimateTotals, quotedItems, inr, vehicleName, vehicleOf } from '@/lib/format';
 import { useDb } from '@/lib/store';
 import type { Estimate } from '@/lib/types';
 
@@ -30,7 +30,7 @@ function Inner() {
     { key: 'id', header: 'Estimate', cell: (e) => <span className="font-semibold">{e.id}</span> },
     { key: 'v', header: 'Vehicle', cell: (e) => { const j = db.jobs.find((x) => x.id === e.jobId); const v = j && vehicleOf(db, j.vehicleId); return <span className="flex items-center gap-3">{v && <VehicleImage carKey={v.carKey} className="h-8 w-14" />}{vehicleName(v)}</span>; } },
     { key: 'c', header: 'Customer', cell: (e) => { const j = db.jobs.find((x) => x.id === e.jobId); return j && customerOf(db, j.customerId)?.name; } },
-    { key: 't', header: 'Total', cell: (e) => <span className="font-semibold">{inr(estimateTotals(e.items).total)}</span> },
+    { key: 't', header: 'Total', cell: (e) => <span className="font-semibold">{inr(estimateTotals(quotedItems(e)).total)}</span> },
     { key: 's', header: 'Status', cell: (e) => <StatusBadge tone={TONE[e.status]} dot>{e.status}</StatusBadge> },
   ];
   return (

@@ -24,7 +24,7 @@ export default function EmployeeInspectionPage() {
         <div className="flex-1"><h1 className="text-[22px] font-bold leading-tight">Inspection (3D &amp; Photos)</h1><p className="text-sm text-ink-500">#{job.id} · {vehicleName(vehicleOf(db, job.vehicleId))}</p></div>
         <StatusBadge tone={STAGE_TONE[job.stage]} dot className="hidden sm:inline-flex">{STAGE_LABEL[job.stage]}</StatusBadge>
       </div>
-      <InspectionBoard jobId={job.id} mode="tech" canEdit />
+      <InspectionBoard jobId={job.id} mode="tech" canEdit doneHref={`/employee/jobs/${job.id}`} />
     </div>
   );
 }

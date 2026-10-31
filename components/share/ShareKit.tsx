@@ -23,7 +23,6 @@ export function useTrack() {
 
 export const SHARE_TABS: { slug: string; label: string }[] = [
   { slug: '', label: 'Overview' },
-  { slug: 'live', label: 'Live View' },
   { slug: 'details', label: 'Details' },
   { slug: 'inspection', label: 'Inspection' },
   { slug: 'photos', label: 'Photos' },
@@ -75,16 +74,15 @@ export function ShareCard({ chip, children, className, tabs, flush }: { chip?: R
   );
 }
 
-export function Chip({ children, tone = 'plain', className }: { children: React.ReactNode; tone?: 'plain' | 'green' | 'amber' | 'red' | 'live'; className?: string }) {
+export function Chip({ children, tone = 'plain', className }: { children: React.ReactNode; tone?: 'plain' | 'green' | 'amber' | 'red'; className?: string }) {
   return (
     <span
       className={clsx(
         'inline-flex items-center gap-2 whitespace-nowrap rounded-2xl px-4 py-2 text-[13px] font-semibold shadow-neu-xs',
         tone === 'plain' && 'neu-xs !rounded-2xl text-ink-700',
-        tone === 'green' && 'bg-gradient-to-br from-[#e5f8ee] to-[#d3f1e1] text-ok-strong',
-        tone === 'amber' && 'bg-gradient-to-br from-[#fff1da] to-[#ffe6bf] text-warn-strong',
-        tone === 'red' && 'bg-gradient-to-br from-[#ffe8e2] to-[#ffd7cd] text-bad-strong',
-        tone === 'live' && 'neu-xs !rounded-2xl text-ink-700',
+        tone === 'green' && 'bg-gradient-to-br from-[#e8f5f1] to-[#d8efe8] text-ok-strong',
+        tone === 'amber' && 'bg-gradient-to-br from-[#f7f1e1] to-[#f1e8cf] text-warn-strong',
+        tone === 'red' && 'bg-gradient-to-br from-[#fbeeeb] to-[#f5d9d3] text-bad-strong',
         className,
       )}
     >

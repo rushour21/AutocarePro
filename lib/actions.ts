@@ -1,6 +1,7 @@
 import { mutate, getDb } from './store';
-import { estimateTotals, STAGE_LABEL, STEP_INDEX } from './format';
-import type { Booking, Customer, Estimate, EstimateItem, Garage, InspectionPoint, Job, PartRequest, RequestStatus, Stage, TaskStatus, User, Vehicle, Invoice, WorkshopLayout } from './types';
+import { estimateOfJob, estimateTotals, itemApproval, pendingItems, approvedItems, phaseOf, stagePhase, STAGE_LABEL, STEP_INDEX } from './format';
+import type { ApprovalMethod, Booking, CheckIn, ClaimType, TaskPhase, Customer, Estimate, EstimateItem, Garage, InspectionPoint, Job, PartRequest, RequestStatus, Stage, TaskStatus, User, Vehicle, Invoice, WorkshopLayout } from './types';
+import { INSPECTION_TASKS, QUALITY_TASKS } from './catalog';
 import { createSeed } from './seed';
 import { CLAIM_FLOW, INSURERS, TODAY_ISO, expectedFromInsurer, newDocs, newPhotos, nowIso, placeholderPhoto, splitOf } from './insurance';
 import type { Claim, ClaimDocKind, ClaimLine, ClaimStatus } from './types';
@@ -12,6 +13,34 @@ const SHORT = () => '16 Mar ' + new Date().toLocaleTimeString('en-IN', { hour: '
 
 const log = (j: Job, by: string, text: string) => j.activity.unshift({ id: uid('a'), at: NOW(), by, text });
 
+/** Starts the next open task of a phase when nothing in it is running. */
+function startNext(j: Job, phase: TaskPhase) {
+  const list = j.tasks.filter((t) => phaseOf(t) === phase);
+  if (!list.some((t) => t.status === 'In Progress')) {
+    const next = list.find((t) => t.status === 'Pending');
+    if (next) next.status = 'In Progress';
+  }
+}
+
+/** Moves a checked-in job's tasks along when its stage changes. Between stage changes they stay in the team's hands. */
+function syncTasks(j: Job) {
+  if (!j.checkin) return;
+  const finish = (phase: TaskPhase) => j.tasks.filter((t) => phaseOf(t) === phase).forEach((t) => { t.status = 'Completed'; });
+  if (j.stage === 'inspection') startNext(j, 'inspection');
+  if (j.stage === 'diagnostics') finish('inspection');
+  if (j.stage === 'in_repair') {
+    finish('inspection');
+    j.tasks.filter((t) => phaseOf(t) === 'quality').forEach((t) => { t.status = 'Pending'; });
+    startNext(j, 'repair');
+  }
+  if (j.stage === 'quality_check') {
+    finish('inspection');
+    finish('repair');
+    startNext(j, 'quality');
+  }
+  if (j.stage === 'ready' || j.stage === 'delivered') j.tasks.forEach((t) => { t.status = 'Completed'; });
+}
+
 // ------------------------------------------------------------------ jobs
 export function setJobStage(jobId: string, stage: Stage, by = 'Team') {
   mutate((d) => {
@@ -19,6 +48,7 @@ export function setJobStage(jobId: string, stage: Stage, by = 'Team') {
     if (!j || j.stage === stage) return;
     const from = j.stage;
     j.stage = stage;
+    syncTasks(j);
     const step = STEP_INDEX[stage];
     if (step >= 0 && !j.timeline.inspection) j.timeline.inspection = SHORT();
     if (step >= 2 && !j.timeline.approval) j.timeline.approval = SHORT();
@@ -34,8 +64,8 @@ export function setJobStage(jobId: string, stage: Stage, by = 'Team') {
       j.completedOn = '16 Mar 2025';
       j.completedInDays = 0;
       j.timeline.delivery = SHORT();
-      const est = d.estimates.find((e) => e.jobId === j.id && e.status === 'Approved');
-      const amount = est ? estimateTotals(est.items).total : 0;
+      const est = estimateOfJob(d, j.id);
+      const amount = est ? estimateTotals(approvedItems(est)).total : 0;
       if (!d.invoices.some((i) => i.jobId === j.id)) {
         const n = Math.max(...d.invoices.map((i) => Number(i.id.replace('INV-', '')))) + 1;
         const inv: Invoice = { id: `INV-${n}`, customerId: j.customerId, vehicleId: j.vehicleId, jobId: j.id, amount, date: '16 Mar 2025', status: 'Pending' };
@@ -167,6 +197,30 @@ export function setTaskStatus(jobId: string, taskId: string, status: TaskStatus)
     if (!j || !t) return;
     t.status = status;
     log(j, 'Team', `Task "${t.title}" marked ${status}`);
+    if (j.checkin && status === 'Completed') startNext(j, phaseOf(t));
+  });
+}
+
+/** A task photo also joins the job's photos, so staff and the customer see it in the gallery. */
+export function addTaskPhoto(jobId: string, taskId: string, src: string, by: string) {
+  mutate((d) => {
+    const j = d.jobs.find((x) => x.id === jobId);
+    const t = j?.tasks.find((x) => x.id === taskId);
+    if (!j || !t) return;
+    t.photos = [...(t.photos ?? []), src];
+    j.photos.push(src);
+    log(j, by, `Photo added: ${t.title}`);
+  });
+}
+
+export function addStagePhoto(jobId: string, side: 'before' | 'after', src: string, by: string) {
+  mutate((d) => {
+    const j = d.jobs.find((x) => x.id === jobId);
+    if (!j) return;
+    if (side === 'before') j.beforePhotos = [...(j.beforePhotos ?? []), src];
+    else j.afterPhotos = [...(j.afterPhotos ?? []), src];
+    j.photos.push(src);
+    log(j, by, `${side === 'before' ? 'Before' : 'After'} photo added`);
   });
 }
 
@@ -174,7 +228,7 @@ export function addTask(jobId: string, title: string) {
   if (!title.trim()) return;
   mutate((d) => {
     const j = d.jobs.find((x) => x.id === jobId);
-    if (j) j.tasks.push({ id: uid('t'), title: title.trim(), status: 'Pending' });
+    if (j) j.tasks.push({ id: uid('t'), title: title.trim(), status: 'Pending', phase: stagePhase(j.stage) });
   });
 }
 
@@ -190,7 +244,7 @@ export function completeChecklist(jobId: string, by: string) {
     const j = d.jobs.find((x) => x.id === jobId);
     if (!j) return;
     j.checklist.forEach((c) => (c.done = true));
-    j.tasks.forEach((t) => (t.status = 'Completed'));
+    if (!j.checkin) j.tasks.forEach((t) => (t.status = 'Completed'));
     log(j, by, `${j.checklistName} completed`);
   });
   setJobStage(jobId, 'quality_check', by);
@@ -253,35 +307,72 @@ export function createEstimate(jobId: string): string {
   return id;
 }
 
-export function sendEstimate(id: string) {
+export function sendEstimate(id: string, by = 'Admin') {
   mutate((d) => {
     const e = d.estimates.find((x) => x.id === id);
     if (!e) return;
     e.status = 'Awaiting Approval';
     e.sentHoursAgo = 0;
+    e.items.forEach((i) => delete i.draft);
     const j = d.jobs.find((x) => x.id === e.jobId);
     if (!j) return;
-    log(j, 'Admin', `Estimate ${e.id} sent to customer`);
+    log(j, by, `Estimate ${e.id} sent to customer`);
     const v = d.vehicles.find((x) => x.id === j.vehicleId);
     d.notifications.unshift({ id: uid('n'), customerId: j.customerId, kind: 'estimate', title: `Estimate ${e.id} awaiting approval`, sub: v ? `${v.make} ${v.model}` : '', ago: 'Just now', read: false, href: `/customer/estimates/${e.id}` });
   });
 }
 
-export function decideEstimate(id: string, decision: 'Approved' | 'Rejected', by: string) {
+/** Records a decision per line. The job does not move by itself: the technician starts the repair. */
+export function decideItems(estimateId: string, decisions: Record<string, 'Approved' | 'Declined'>, method: ApprovalMethod, by: string) {
   mutate((d) => {
-    const e = d.estimates.find((x) => x.id === id);
-    if (!e) return;
-    e.status = decision;
-    const j = d.jobs.find((x) => x.id === e.jobId);
-    if (!j) return;
-    log(j, by, `Estimate ${e.id} ${decision.toLowerCase()}`);
-    if (decision === 'Approved' && (j.stage === 'diagnostics' || j.stage === 'inspection' || j.stage === 'pending')) {
-      j.stage = 'in_repair';
-      j.progress = Math.max(j.progress, 40);
-      j.timeline.approval = SHORT();
-      j.timeline.repair = SHORT();
-    }
+    const e = d.estimates.find((x) => x.id === estimateId);
+    const j = e && d.jobs.find((x) => x.id === e.jobId);
+    if (!e || !j) return;
+    const via = `${method} · ${SHORT()}`;
+    e.items.forEach((i) => {
+      const decision = decisions[i.id];
+      if (!decision) {
+        if (!i.approval) i.approval = itemApproval(e, i);
+        return;
+      }
+      i.approval = decision;
+      i.decidedVia = via;
+      log(j, by, `${i.name} ${decision.toLowerCase()} (${method})`);
+      if (decision === 'Approved' && i.extra && !j.tasks.some((t) => t.title === i.name)) j.tasks.push({ id: uid('t'), title: i.name, status: 'Pending', phase: 'repair' });
+      if (decision === 'Declined') j.tasks = j.tasks.filter((t) => t.title !== i.name || t.status !== 'Pending');
+    });
+    if (pendingItems(e).every((i) => i.draft)) e.status = approvedItems(e).length ? 'Approved' : pendingItems(e).length ? 'Draft' : 'Rejected';
+    if (j.checkin && j.stage === 'in_repair') startNext(j, 'repair');
+    if (approvedItems(e).length && !j.timeline.approval) j.timeline.approval = SHORT();
+    if (approvedItems(e).length && !j.clientApproval && !j.isInsurance) j.clientApproval = { method, by, at: NOW() };
   });
+}
+
+/** Asks the client for the initial go-ahead when there is no priced work to send yet. */
+export function requestClientApproval(jobId: string, by: string) {
+  mutate((d) => {
+    const j = d.jobs.find((x) => x.id === jobId);
+    if (!j) return;
+    j.approvalAsked = true;
+    log(j, by, 'Initial approval requested from the client');
+    d.notifications.unshift({ id: uid('n'), customerId: j.customerId, kind: 'estimate', title: 'Please approve the inspection', sub: `Job #${j.id}`, ago: 'Just now', read: false, href: `/customer/jobs/${j.id}` });
+  });
+}
+
+/** The "Approved by client" tick. */
+export function tickClientApproval(jobId: string, method: ApprovalMethod, by: string) {
+  mutate((d) => {
+    const j = d.jobs.find((x) => x.id === jobId);
+    if (!j) return;
+    j.clientApproval = { method, by, at: NOW() };
+    j.approvalAsked = false;
+    j.timeline.approval = j.timeline.approval ?? SHORT();
+    log(j, by, `Approved by client (${method})`);
+  });
+  // on a claim the client's tick is only their consent: the work lines wait for the insurer
+  const d = getDb();
+  const est = estimateOfJob(d, jobId);
+  if (est && !d.jobs.find((x) => x.id === jobId)?.isInsurance) decideItems(est.id, Object.fromEntries(pendingItems(est).filter((i) => !i.draft).map((i) => [i.id, 'Approved' as const])), method, by);
 }
 
 export function payInvoice(id: string) {
@@ -430,6 +521,139 @@ export function bookService(b: Omit<Booking, 'id' | 'status'>): string {
   const cat = /brake/i.test(b.service) ? 'brake' : /ac/i.test(b.service) ? 'ac' : /body|detail/i.test(b.service) ? 'body' : 'service';
   jobId = createJob({ vehicleId: b.vehicleId, service: b.service, category: cat, priority: 'Medium', techId: tech.id, notes: `Booked online for ${b.date}, ${b.time}`, by: 'Customer booking' });
   return jobId;
+}
+
+// ------------------------------------------------------------------ check-in and job flow
+export interface InsuranceInput {
+  type: ClaimType;
+  insurer: string;
+  policyNo: string;
+  claimNo: string;
+  accidentDate: string;
+}
+
+export interface CheckInInput {
+  vehicleId: string;
+  techId: string;
+  priority: Job['priority'];
+  dueIn: number;
+  checkin: CheckIn;
+  work: { name: string; type: string; amount: number; cat: Job['serviceCategory'] }[];
+  /** set when the "Approved by client" box is ticked */
+  approval?: ApprovalMethod;
+  insurance?: InsuranceInput;
+  by: string;
+}
+
+const workLabel = (input: CheckInInput) => {
+  const names = input.work.map((w) => w.name);
+  if (names.length === 0) return input.checkin.reasons.includes('accident') ? 'Accident repair' : input.checkin.reasons.includes('estimate') ? 'Estimate only' : 'Inspection and diagnosis';
+  return names.length > 2 ? `${names.slice(0, 2).join(', ')} +${names.length - 2} more` : names.join(', ');
+};
+
+export function checkInJob(input: CheckInInput): string {
+  const id = createJob({ vehicleId: input.vehicleId, service: workLabel(input), category: input.work[0]?.cat ?? 'service', priority: input.priority, techId: input.techId, dueIn: input.dueIn, by: input.by });
+  mutate((d) => {
+    const j = d.jobs.find((x) => x.id === id);
+    const v = d.vehicles.find((x) => x.id === input.vehicleId);
+    if (!j) return;
+    j.checkin = input.checkin;
+    const tasksOf = (phase: TaskPhase, titles: string[]) => titles.map((title) => ({ id: uid('t'), title, status: 'Pending' as const, phase }));
+    j.tasks = [...tasksOf('inspection', INSPECTION_TASKS), ...tasksOf('repair', input.work.map((w) => w.name)), ...tasksOf('quality', QUALITY_TASKS)];
+    if (v) v.odometer = Math.max(v.odometer, input.checkin.odometer);
+    j.activity.unshift({ id: uid('a'), at: NOW(), by: input.by, text: `Car checked in. Brought by: ${input.checkin.broughtBy}` });
+    if (input.work.length) {
+      const n = Math.max(...d.estimates.map((e) => Number(e.id.replace('EST-', '')))) + 1;
+      d.estimates.unshift({ id: `EST-${n}`, jobId: id, status: 'Draft', sentHoursAgo: 0, why: '', items: input.work.map((w) => ({ id: uid('i'), name: w.name, type: w.type, category: w.type === 'Labour' ? 'Labour' : 'Parts', amount: w.amount, approval: 'Pending' as const })) });
+    }
+  });
+  if (input.insurance) {
+    setJobInsurance(id, true, input.by);
+    const claimId = getDb().jobs.find((j) => j.id === id)?.claimId;
+    if (claimId) updateClaim(claimId, input.insurance, input.by);
+  }
+  if (input.approval) tickClientApproval(id, input.approval, input.by);
+  return id;
+}
+
+export function addWorkItem(jobId: string, item: { name: string; type: string; amount: number; reason: string; photo?: string }, by: string) {
+  mutate((d) => {
+    const j = d.jobs.find((x) => x.id === jobId);
+    if (!j) return;
+    let e = estimateOfJob(d, jobId);
+    if (!e) {
+      const n = Math.max(...d.estimates.map((x) => Number(x.id.replace('EST-', '')))) + 1;
+      e = { id: `EST-${n}`, jobId, status: 'Draft', sentHoursAgo: 0, why: '', items: [] };
+      d.estimates.unshift(e);
+    }
+    e.items.push({ id: uid('i'), name: item.name, type: item.type, category: item.type === 'Labour' ? 'Labour' : 'Parts', amount: item.amount, approval: 'Pending', extra: true, draft: true, reason: item.reason, photo: item.photo });
+    log(j, by, `Found: ${item.name}`);
+  });
+}
+
+export function removeWorkItem(jobId: string, itemId: string) {
+  mutate((d) => {
+    const e = estimateOfJob(d, jobId);
+    if (e) e.items = e.items.filter((i) => i.id !== itemId);
+  });
+}
+
+/** Sends the open lines to whoever decides them: the client, or the insurance desk on a claim. */
+export function sendForApproval(jobId: string, by: string) {
+  const d0 = getDb();
+  const j0 = d0.jobs.find((x) => x.id === jobId);
+  const e0 = estimateOfJob(d0, jobId);
+  if (!j0 || !e0 || pendingItems(e0).length === 0) return;
+  if (j0.isInsurance && j0.claimId) {
+    mutate((d) => {
+      const j = d.jobs.find((x) => x.id === jobId);
+      const c = d.claims.find((x) => x.id === j0.claimId);
+      const e = estimateOfJob(d, jobId);
+      if (!j || !c || !e) return;
+      pendingItems(e).filter((i) => !c.lines.some((l) => l.name === i.name)).forEach((i) => c.lines.push({ id: uid('cl'), name: i.name, kind: i.category === 'Parts' ? 'part' : 'labour', amount: i.amount, covered: true }));
+      e.status = 'Awaiting Approval';
+      e.items.forEach((i) => delete i.draft);
+      claimEvent(c, by, 'Work list sent by the technician');
+      log(j, by, 'Work list sent to the insurance desk');
+      if (j.stage === 'pending' || j.stage === 'inspection') j.stage = 'diagnostics';
+      syncTasks(j);
+    });
+    return;
+  }
+  sendEstimate(e0.id, by);
+  mutate((d) => {
+    const j = d.jobs.find((x) => x.id === jobId);
+    if (j && (j.stage === 'pending' || j.stage === 'inspection')) {
+      j.stage = 'diagnostics';
+      j.progress = Math.max(j.progress, 20);
+      syncTasks(j);
+    }
+  });
+}
+
+/** Insurer sign-off lets the approved claim lines through without asking the client again. */
+export function startRepair(jobId: string, by: string): { ok: boolean; error?: string } {
+  const d = getDb();
+  const j = d.jobs.find((x) => x.id === jobId);
+  const e = estimateOfJob(d, jobId);
+  if (!j) return { ok: false, error: 'Job not found.' };
+  if (j.isInsurance) {
+    const c = d.claims.find((x) => x.id === j.claimId);
+    if (!c || rankOf(c.status) < rankOf('Approved')) return { ok: false, error: 'Wait for the insurer to approve this claim.' };
+    if (e) decideItems(e.id, Object.fromEntries(pendingItems(e).map((i) => [i.id, 'Approved' as const])), 'Insurer', by);
+  } else if (!e || approvedItems(e).length === 0) return { ok: false, error: 'No approved work yet.' };
+  setJobStage(jobId, 'in_repair', by);
+  return { ok: true };
+}
+
+export function setJobHold(jobId: string, reason: string | undefined, by: string) {
+  mutate((d) => {
+    const j = d.jobs.find((x) => x.id === jobId);
+    if (!j) return;
+    j.onHold = !!reason;
+    j.holdReason = reason;
+    log(j, by, reason ? `On hold: ${reason}` : 'Job resumed');
+  });
 }
 
 export function resetDemo() {
@@ -617,13 +841,13 @@ export function sendUploadLink(id: string, by = 'Team') {
   });
 }
 
-export function setPhotoUploaded(id: string, photoId: string, uploaded: boolean) {
+export function setPhotoUploaded(id: string, photoId: string, uploaded: boolean, src?: string) {
   mutate((d) => {
     const c = d.claims.find((x) => x.id === id);
     const p = c?.photos.find((x) => x.id === photoId);
     if (!p) return;
     p.uploaded = uploaded;
-    p.src = uploaded ? placeholderPhoto(c!.photos.indexOf(p) + 3) : undefined;
+    p.src = uploaded ? src ?? placeholderPhoto(c!.photos.indexOf(p) + 3) : undefined;
   });
 }
 

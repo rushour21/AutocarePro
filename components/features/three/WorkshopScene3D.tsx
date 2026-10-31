@@ -193,9 +193,9 @@ export function BayView({ bay, live, selected, hovered, onSelect, onHover, liftR
   const num = useMemo(() => (bay.name.match(/\d+/)?.[0] ?? bay.name.slice(0, 3)).padStart(2, '0'), [bay.name]);
   const stateText = !bay.active ? 'INACTIVE' : bay.state === 'maintenance' ? 'MAINTENANCE' : bay.state === 'reserved' ? 'RESERVED' : undefined;
   const tex = useMemo(() => labelTexture(num, muted ? '#c9ccd2' : '#ffffff', stateText), [num, muted, stateText]);
-  const border = muted ? '#9aa0a8' : bay.state === 'maintenance' ? '#ee8a12' : bay.state === 'reserved' ? '#7456f0' : t.color;
+  const border = muted ? '#9aa0a8' : bay.state === 'maintenance' ? '#c9a24a' : bay.state === 'reserved' ? '#7d86b5' : t.color;
   const bw = selected ? 0.22 : hovered ? 0.17 : 0.12;
-  const pad = muted ? '#6f747c' : bay.type === 'wash' ? '#3c7f95' : '#545c68';
+  const pad = muted ? '#6f747c' : bay.type === 'wash' ? '#4f7f8c' : '#545c68';
   const rot = bay.rot === 90 ? Math.PI / 2 : 0;
 
   return (
@@ -245,7 +245,7 @@ export function BayView({ bay, live, selected, hovered, onSelect, onHover, liftR
         {live && !bare && (live.stage === 'in_repair' || live.stage === 'diagnostics' || live.stage === 'inspection') && (
           <>
             <Technician position={[bay.w / 2 - 1.0, 0.06, bay.l / 2 - 1.5]} rotation={-Math.PI / 2 - 0.3} stoop={0.12} />
-            {live.stage === 'in_repair' && <Technician position={[-(bay.w / 2 - 1.0), 0.06, 0.4]} rotation={Math.PI / 2 + 0.2} shirt="#c0392b" />}
+            {live.stage === 'in_repair' && <Technician position={[-(bay.w / 2 - 1.0), 0.06, 0.4]} rotation={Math.PI / 2 + 0.2} shirt="#d84a27" />}
           </>
         )}
       </group>
@@ -294,10 +294,10 @@ export function WorkshopScene3D({ layout, occupants, idle, selectedId, onSelect,
       >
         <Environment resolution={128} frames={1}>
           <Lightformer form="rect" intensity={2.4} position={[0, 12, 0]} rotation-x={Math.PI / 2} scale={[40, 40, 1]} color="#ffffff" />
-          <Lightformer form="rect" intensity={1.3} position={[-14, 5, 2]} rotation-y={Math.PI / 2} scale={[24, 8, 1]} color="#fff4e2" />
+          <Lightformer form="rect" intensity={1.3} position={[-14, 5, 2]} rotation-y={Math.PI / 2} scale={[24, 8, 1]} color="#f4f6fa" />
           <Lightformer form="rect" intensity={0.9} position={[14, 4, 6]} rotation-y={-Math.PI / 2} scale={[24, 8, 1]} color="#dbe8ff" />
         </Environment>
-        <hemisphereLight args={['#ffffff', '#b7a98f', 0.55]} />
+        <hemisphereLight args={['#ffffff', '#a9afba', 0.55]} />
         <directionalLight
           position={[plan.w / 2 - 22, 38, plan.h / 2 + 18]}
           target-position={[plan.w / 2, 0, plan.h / 2]}
@@ -351,7 +351,7 @@ export function WorkshopScene3D({ layout, occupants, idle, selectedId, onSelect,
             >
               <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: l.color }} />
               <span className="leading-tight">
-                <span className="block text-[10.5px] font-bold text-[#26272b]">{l.name}</span>
+                <span className="block text-[10.5px] font-bold text-[#25262b]">{l.name}</span>
                 <span className="block text-[9.5px] font-medium" style={{ color: l.color }}>{l.text}</span>
               </span>
             </button>

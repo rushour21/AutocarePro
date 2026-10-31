@@ -1,16 +1,18 @@
 'use client';
 
-import { CalendarCheck, CalendarClock, ClipboardCheck, Flame, Gauge, Wrench, CalendarDays } from 'lucide-react';
+import Link from 'next/link';
+import { CalendarCheck, CalendarClock, ClipboardCheck, Flame, Gauge, TriangleAlert, Wrench, CalendarDays } from 'lucide-react';
+import { InitialApproval } from '@/components/features/EstimateApproval';
 import { JobStepper } from '@/components/features/JobProgress';
 import { Chip, RowIcon, ShareCard, useTrack } from '@/components/share/ShareKit';
 import { Button, VehicleImage } from '@/components/ui';
-import { STEP_INDEX, vehicleName, vehicleOf } from '@/lib/format';
+import { estimateOfJob, STEP_INDEX, vehicleName, vehicleOf } from '@/lib/format';
 import { STAGE_HEADLINE, trackInfo } from '@/lib/track';
 import { useDb } from '@/lib/store';
 
 const CONFETTI = [
-  [8, 10, '#f6c63c'], [14, 32, '#2eb872'], [20, 6, '#f26a2e'], [27, 42, '#4aa8f0'], [34, 14, '#f6c63c'], [44, 6, '#2eb872'], [56, 36, '#f26a2e'], [62, 9, '#4aa8f0'],
-  [72, 40, '#f6c63c'], [78, 18, '#f26a2e'], [86, 5, '#2eb872'], [92, 30, '#4aa8f0'], [96, 14, '#f6c63c'], [5, 44, '#f26a2e'], [12, 20, '#4aa8f0'], [88, 44, '#2eb872'],
+  [8, 10, '#d9b45f'], [14, 32, '#3fa98b'], [20, 6, '#d84a27'], [27, 42, '#78a2c6'], [34, 14, '#d9b45f'], [44, 6, '#3fa98b'], [56, 36, '#d84a27'], [62, 9, '#78a2c6'],
+  [72, 40, '#d9b45f'], [78, 18, '#d84a27'], [86, 5, '#3fa98b'], [92, 30, '#78a2c6'], [96, 14, '#d9b45f'], [5, 44, '#d84a27'], [12, 20, '#78a2c6'], [88, 44, '#3fa98b'],
 ] as const;
 
 export default function ShareOverview() {
@@ -22,6 +24,7 @@ export default function ShareOverview() {
   const name = vehicleName(v);
   const done = step >= 4;
   const head = STAGE_HEADLINE[job.stage];
+  const awaiting = estimateOfJob(db, job.id)?.status === 'Awaiting Approval' && !job.isInsurance;
 
   if (done) {
     return (
@@ -53,7 +56,7 @@ export default function ShareOverview() {
           <br />
           {head.title.startsWith('Service') ? head.title : `Service ${head.title}`}
         </h1>
-        <p className="mt-3 text-[16px] text-ink-500">Track the real-time status of your vehicle.</p>
+        <p className="mt-3 text-[16px] text-ink-500">Track the status of your vehicle.</p>
         {v && <VehicleImage carKey={v.carKey} className="mx-auto mt-4 h-[200px] w-full max-w-[440px] sm:h-[250px]" alt={name} />}
         <p className="mt-1 text-lg font-bold">{name}</p>
         <p className="text-[15px] tracking-wide text-ink-400">{v?.reg}</p>
@@ -64,17 +67,24 @@ export default function ShareOverview() {
         ))}
       </dl>
       <JobStepper job={job} currentStyle="active" labels={['Inspection', 'Approval', 'In Repair', 'Quality Check', 'Ready']} className="mx-auto mt-7 max-w-[760px]" />
+      <InitialApproval job={job} by="Customer (tracking link)" />
+      {awaiting && (
+        <Link href={`${base}/estimate`} className="mx-auto mt-7 flex max-w-[780px] items-center gap-4 rounded-2xl bg-warn-soft px-5 py-4 text-warn-strong">
+          <TriangleAlert className="h-6 w-6 shrink-0" />
+          <span className="min-w-0 flex-1"><span className="block text-[17px] font-bold">Your approval is needed</span><span className="block text-[15px]">We will start this work after you approve it.</span></span>
+          <span className="shrink-0 font-semibold">Review</span>
+        </Link>
+      )}
       <div className="neu-row mx-auto mt-7 flex max-w-[780px] items-center gap-4 px-5 py-4">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-info-soft text-info"><ClipboardCheck className="h-6 w-6" /></span>
         <div className="min-w-0 flex-1">
-          <p className="text-[17px] font-bold">Your vehicle is currently {job.stage === 'in_repair' ? 'in Repair' : job.stage === 'quality_check' ? 'in Quality Check' : job.stage === 'pending' ? 'scheduled' : job.stage === 'inspection' ? 'being inspected' : 'being diagnosed'}</p>
+          <p className="text-[17px] font-bold">Your vehicle is currently {job.stage === 'in_repair' ? 'in Repair' : job.stage === 'quality_check' ? 'in Quality Check' : job.stage === 'pending' ? (job.checkin ? 'checked in' : 'scheduled') : job.stage === 'inspection' ? 'being inspected' : 'being diagnosed'}</p>
           <p className="text-[15px] text-ink-600">{job.stage === 'in_repair' ? `Our team is working on ${job.service.replace(' - ', ' and ').toLowerCase()}.` : head.text}</p>
         </div>
         <span className="hidden self-end text-xs text-ink-400 sm:block">{info.updatedAgo}</span>
       </div>
       <p className="mt-3 text-center text-xs text-ink-400 sm:hidden">{info.updatedAgo}</p>
       <div className="mt-5 flex flex-wrap justify-center gap-3">
-        <Button variant="soft" href={`${base}/live`}>View Live Workshop</Button>
         <Button variant="neu" href={`${base}/timeline`}>See full timeline</Button>
       </div>
     </ShareCard>

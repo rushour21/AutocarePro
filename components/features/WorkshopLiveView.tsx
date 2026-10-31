@@ -58,7 +58,7 @@ export function WorkshopLiveView({ mode, variant = 'full', userId, highlightJobI
     const o: Record<string, BayLive | undefined> = {};
     db.jobs.forEach((j) => {
       if (!j.bayId || j.stage === 'delivered') return;
-      o[j.bayId] = j.id === highlightJobId && live.occupants[j.bayId] ? live.occupants[j.bayId] : { carKey: 'glc', title: 'Vehicle', chip: 'In service', color: '#a9a39a' };
+      o[j.bayId] = j.id === highlightJobId && live.occupants[j.bayId] ? live.occupants[j.bayId] : { carKey: 'glc', title: 'Vehicle', chip: 'In service', color: '#a6a9b0' };
     });
     return o;
   }, [mode, live.occupants, db.jobs, highlightJobId]);
@@ -97,7 +97,7 @@ export function WorkshopLiveView({ mode, variant = 'full', userId, highlightJobI
 
   const ratio = variant === 'cover' ? 'aspect-[2.45/1]' : variant === 'compact' ? 'aspect-[4/3]' : 'aspect-[16/10]';
   const canvas = (
-    <div className={clsx('relative overflow-hidden bg-gradient-to-b from-[#eef3fa] to-[#dde5f0]', ratio, variant === 'full' ? 'mx-3 mb-3 rounded-[20px] shadow-neu-in' : 'rounded-2xl')}>
+    <div className={clsx('relative overflow-hidden bg-gradient-to-b from-[#eef0f3] to-[#dfe2e7]', ratio, variant === 'full' ? 'mx-3 mb-3 rounded-[20px] shadow-neu-in' : 'rounded-2xl')}>
       {view === '3d' ? (
         <Workshop3D layout={layout} occupants={occupants} idle={live.idle} selectedId={variant === 'cover' ? focusBay ?? null : openId} onSelect={(id) => interactive && setOpenId(id)} interactive={variant === 'full' && interactive} showLabels={mode !== 'customer' && variant !== 'cover'} focusBayId={variant === 'cover' ? focusBay : undefined} apiRef={api} />
       ) : (
@@ -106,7 +106,7 @@ export function WorkshopLiveView({ mode, variant = 'full', userId, highlightJobI
         </div>
       )}
       {variant === 'compact' && (
-        <span className="absolute bottom-3 left-3 z-20 rounded-xl bg-[#fffaf4]/95 px-3 py-1.5 text-xs font-semibold text-ink shadow-neu-xs">
+        <span className="absolute bottom-3 left-3 z-20 rounded-xl bg-[#fcfcfd]/95 px-3 py-1.5 text-xs font-semibold text-ink shadow-neu-xs">
           <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-coral-500" />
           {inRepair} {inRepair === 1 ? 'vehicle' : 'vehicles'} in repair
         </span>

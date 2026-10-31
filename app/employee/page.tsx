@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Check, ChevronRight, ClipboardList, Flame, Gauge, Wrench } from 'lucide-react';
 import { TopBar } from '@/components/layout/AppShell';
 import { WorkshopLiveView } from '@/components/features/WorkshopLiveView';
-import { Button, Card, EmptyState, StatCard, StatusBadge, VehicleImage } from '@/components/ui';
+import { Button, Card, EmptyState, Greeting, StatCard, StatusBadge, VehicleImage } from '@/components/ui';
 import { setTaskStatus } from '@/lib/actions';
 import { visibleJobs } from '@/lib/access';
 import { useSession } from '@/lib/auth';
@@ -37,7 +37,7 @@ export default function EmployeeDashboard() {
         right={<span className="neu-sm px-4 py-2.5 text-sm text-ink-600">{db.today}</span>}
       />
       <div className="mb-6">
-        <h1 className="text-[30px] font-bold leading-tight tracking-tight">Good morning, {user.name.split(' ')[0]} <span>👋</span></h1>
+        <h1 className="text-[30px] font-bold leading-tight tracking-tight"><Greeting name={user.name.split(' ')[0]} /> <span>👋</span></h1>
         <p className="mt-1 text-sm text-ink-500">You have {mine.length} jobs assigned today.</p>
       </div>
       <section className="grid grid-cols-2 gap-4 xl:grid-cols-4" aria-label="Summary">
@@ -110,7 +110,7 @@ export default function EmployeeDashboard() {
                 <button
                   aria-label={`Mark "${task.title}" for ${vehicleName(vehicleOf(db, job.vehicleId))} as completed`}
                   onClick={() => setTaskStatus(job.id, task.id, 'Completed')}
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-[#ff9a5e] to-[#f25a1f] text-white shadow-coral"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-[#e4633f] to-[#cf4320] text-white shadow-coral"
                 >
                   <Check className="h-4 w-4" strokeWidth={3} />
                 </button>

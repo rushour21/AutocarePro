@@ -2,13 +2,13 @@ import type { Bay, BayType, Fixture, FixtureKind, Job, WorkshopLayout } from './
 
 /* ------------------------------------------------------------------ catalogues */
 export const BAY_TYPES: { key: BayType; label: string; color: string }[] = [
-  { key: 'general', label: 'General Service', color: '#f26a2e' },
-  { key: 'inspection', label: 'Inspection', color: '#2f6bff' },
-  { key: 'diagnostics', label: 'Diagnostics', color: '#7456f0' },
-  { key: 'tyre', label: 'Tyre Service', color: '#1d9d65' },
-  { key: 'quality', label: 'Quality Check', color: '#e8a317' },
-  { key: 'detailing', label: 'Detailing & PPF', color: '#d6409f' },
-  { key: 'wash', label: 'Wash Area', color: '#1fb3d6' },
+  { key: 'general', label: 'General Service', color: '#d84a27' },
+  { key: 'inspection', label: 'Inspection', color: '#5f8fb8' },
+  { key: 'diagnostics', label: 'Diagnostics', color: '#7d86b5' },
+  { key: 'tyre', label: 'Tyre Service', color: '#248a6c' },
+  { key: 'quality', label: 'Quality Check', color: '#c9a24a' },
+  { key: 'detailing', label: 'Detailing & PPF', color: '#b5718f' },
+  { key: 'wash', label: 'Wash Area', color: '#6fa9b8' },
 ];
 export const bayType = (k: BayType) => BAY_TYPES.find((t) => t.key === k) ?? BAY_TYPES[0];
 

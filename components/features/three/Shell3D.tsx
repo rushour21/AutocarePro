@@ -32,8 +32,8 @@ function segments(len: number, gaps: [number, number][]) {
 }
 
 const T = 0.3;
-const WALL = '#e7e4dd';
-const TRIM = '#3a4a6b';
+const WALL = '#e4e6ea';
+const TRIM = '#3c4150';
 
 export function Floor({ plan }: { plan: LayoutPlan }) {
   const tex = useMemo(() => {
@@ -106,7 +106,7 @@ function WallRun({ wall, plan, gaps, tall }: { wall: Wall; plan: LayoutPlan; gap
             {tall && (
               <mesh position={lp}>
                 <boxGeometry args={lsize} />
-                <meshStandardMaterial color="#fffbe9" emissive="#fff1c4" emissiveIntensity={0.9} />
+                <meshStandardMaterial color="#fcfcfd" emissive="#e8edf5" emissiveIntensity={0.9} />
               </mesh>
             )}
           </group>
@@ -165,7 +165,7 @@ export function EntranceMarks({ fixtures }: { fixtures: Fixture[] }) {
       {fixtures.filter((f) => f.kind === 'entrance').map((f) => (
         <mesh key={f.id} position={[f.x + f.w + 1.2, 0.03, f.y + f.h / 2]} rotation={[-Math.PI / 2, 0, 0]}>
           <shapeGeometry args={[shape]} />
-          <meshBasicMaterial color="#1d9d65" />
+          <meshBasicMaterial color="#248a6c" />
         </mesh>
       ))}
     </group>

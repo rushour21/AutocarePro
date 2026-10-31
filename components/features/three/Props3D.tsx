@@ -8,13 +8,13 @@ import { ToolCabinet } from './Fixtures3D';
 import { signTexture } from './textures';
 
 /** A low-poly technician in a blue uniform. Local frame: faces +Z, feet on y = 0. */
-export function Technician({ position, rotation = 0, shirt = '#2f55b8', stoop = 0 }: { position: [number, number, number]; rotation?: number; shirt?: string; stoop?: number }) {
+export function Technician({ position, rotation = 0, shirt = '#4f7ea8', stoop = 0 }: { position: [number, number, number]; rotation?: number; shirt?: string; stoop?: number }) {
   return (
     <group position={position} rotation={[0, rotation, 0]}>
       {[-0.1, 0.1].map((x) => (
         <mesh key={x} position={[x, 0.42, 0]} castShadow>
           <boxGeometry args={[0.17, 0.84, 0.2]} />
-          <meshStandardMaterial color="#27304a" roughness={0.8} />
+          <meshStandardMaterial color="#2f3a48" roughness={0.8} />
         </mesh>
       ))}
       <group rotation={[stoop, 0, 0]} position={[0, 0.84, 0]}>
@@ -45,7 +45,7 @@ function Workbench({ position, w = 2.2 }: { position: [number, number, number]; 
     <group position={position}>
       <mesh position={[0, 0.9, 0]} castShadow receiveShadow>
         <boxGeometry args={[w, 0.07, 0.75]} />
-        <meshStandardMaterial color="#c9a77a" roughness={0.6} />
+        <meshStandardMaterial color="#b4b7bd" roughness={0.6} />
       </mesh>
       {[-1, 1].flatMap((sx) => [-1, 1].map((sz) => (
         <mesh key={`${sx}${sz}`} position={[sx * (w / 2 - 0.07), 0.45, sz * 0.3]} castShadow>
@@ -65,7 +65,7 @@ function Workbench({ position, w = 2.2 }: { position: [number, number, number]; 
       {Array.from({ length: Math.max(2, Math.floor(w / 0.45)) }).map((_, i) => (
         <mesh key={i} position={[-w / 2 + 0.3 + i * 0.4, 1.8 + ((i % 3) - 1) * 0.25, -0.31]}>
           <boxGeometry args={[0.07, 0.34, 0.03]} />
-          <meshStandardMaterial color={['#c0392b', '#f2b01e', '#2f55b8'][i % 3]} roughness={0.5} metalness={0.3} />
+          <meshStandardMaterial color={['#d84a27', '#c9a24a', '#4f7ea8'][i % 3]} roughness={0.5} metalness={0.3} />
         </mesh>
       ))}
     </group>
@@ -88,7 +88,7 @@ function TyreStack({ position, n = 4 }: { position: [number, number, number]; n?
 function Barrels({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
-      {[[0, 0, '#2f55b8'], [0.62, 0.1, '#c0392b'], [0.3, 0.62, '#2f55b8']].map(([x, z, c], i) => (
+      {[[0, 0, '#4f7ea8'], [0.62, 0.1, '#d84a27'], [0.3, 0.62, '#4f7ea8']].map(([x, z, c], i) => (
         <mesh key={i} position={[x as number, 0.45, z as number]} castShadow>
           <cylinderGeometry args={[0.28, 0.28, 0.9, 16]} />
           <meshStandardMaterial color={c as string} metalness={0.4} roughness={0.5} />

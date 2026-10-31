@@ -56,7 +56,7 @@ export default function MessagesPage() {
                 return (
                   <li key={c.id}>
                     <button onClick={() => { setActive(c.id); markChannelRead(c.id); }} aria-current={active === c.id} className={clsx('flex w-full items-center gap-3 rounded-2xl p-3 text-left transition', active === c.id ? 'neu-sm' : 'hover:bg-white/50')}>
-                      {c.kind === 'group' ? <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b from-[#fff3ea] to-[#ffe0cc] shadow-neu-xs"><LogoMark className="h-7 w-7" /></span> : <Avatar src={u?.avatar} size={44} />}
+                      {c.kind === 'group' ? <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b from-[#fbeeeb] to-[#f8e7e4] shadow-neu-xs"><LogoMark className="h-7 w-7" /></span> : <Avatar src={u?.avatar} size={44} />}
                       <span className="min-w-0 flex-1"><span className="flex items-baseline justify-between gap-2"><span className="truncate text-sm font-bold">{c.name}</span><span className="shrink-0 text-[10px] text-ink-400">{c.lastAt}</span></span><span className="block truncate text-xs text-ink-500">{c.last}</span></span>
                       {c.unread > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-md bg-coral-500 px-1 text-[11px] font-bold text-white">{c.unread}</span>}
                     </button>

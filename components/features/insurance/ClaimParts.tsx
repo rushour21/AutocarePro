@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import { AlertTriangle, Camera, CheckCircle2, Clock, FileText, MessageCircle, Plus, Trash2 } from 'lucide-react';
 import { Button, Card, Field, Input, Modal, Select, StatusBadge, Toggle, cn } from '@/components/ui';
+import { PhotoButton } from '@/components/features/PhotoButton';
 import { addClaimLine, removeClaimLine, sendUploadLink, setDocUploaded, setPhotoUploaded, toggleClaimLine, updateClaim } from '@/lib/actions';
 import { inr } from '@/lib/format';
-import { CLAIM_TONE, fmtAt, INSURERS, slaOf, splitOf, missingDocs, type SlaBadge } from '@/lib/insurance';
+import { CLAIM_TONE, fmtAt, INSURERS, payoutOf, slaOf, splitOf, missingDocs, type SlaBadge } from '@/lib/insurance';
 import type { Claim, ClaimPhotoStage } from '@/lib/types';
 
 export const ClaimStatusBadge = ({ status }: { status: Claim['status'] }) => <StatusBadge tone={CLAIM_TONE[status]} dot>{status}</StatusBadge>;
@@ -36,9 +37,9 @@ export function ClaimDetails({ claim, readOnly }: { claim: Claim; readOnly?: boo
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <Field label="Claim type" className="sm:col-span-2">
-        <div className="inline-flex rounded-2xl neu-in-sm p-1">
+        <div className="segmented inline-flex gap-0.5 p-0.5">
           {(['Cashless', 'Reimbursement'] as const).map((t) => (
-            <button key={t} type="button" disabled={readOnly} onClick={() => set({ type: t })} className={cn('rounded-xl px-4 py-1.5 text-sm font-medium transition', claim.type === t ? 'bg-ink text-white shadow' : 'text-ink-500')}>
+            <button key={t} type="button" disabled={readOnly} onClick={() => set({ type: t })} className={cn('rounded-[9px] px-4 py-1.5 text-[13px] font-medium transition-colors', claim.type === t ? 'segmented-thumb text-ink' : 'text-ink-500')}>
               {t}
             </button>
           ))}
@@ -111,11 +112,11 @@ export function PhotoChecklist({ claim }: { claim: Claim }) {
                     <CheckCircle2 className="absolute right-1.5 top-1.5 h-4 w-4 text-white drop-shadow" />
                   </button>
                 ) : (
-                  <button key={p.id} type="button" onClick={() => setPhotoUploaded(claim.id, p.id, true)} className="flex aspect-[4/3] flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-ivory-400 px-1 text-center text-[11px] font-medium text-ink-500 transition hover:border-coral-300 hover:text-coral-500">
+                  <PhotoButton key={p.id} plain label={`Upload ${p.label}`} onPhoto={(src) => setPhotoUploaded(claim.id, p.id, true, src)} className="flex aspect-[4/3] flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-ivory-400 px-1 text-center text-[11px] font-medium text-ink-500 transition hover:border-coral-300 hover:text-coral-500">
                     <Camera className="h-4 w-4" />
                     {p.label}
                     <span className="text-[10px] font-normal text-warn">Missing</span>
-                  </button>
+                  </PhotoButton>
                 ),
               )}
             </div>
@@ -149,6 +150,31 @@ export function SplitSummary({ claim, className }: { claim: Claim; className?: s
         <div className="flex justify-between"><span>Depreciation{claim.zeroDep ? ' (zero-dep policy)' : ` (${claim.depreciationPct}% on parts)`}</span><span>{inr(s.depreciation)}</span></div>
         <div className="flex justify-between"><span>Compulsory deductible</span><span>{inr(s.deductible)}</span></div>
       </div>
+    </div>
+  );
+}
+
+/** Both ways of settling this claim, side by side. Tapping one makes it the claim's type. */
+export function PayoutSplit({ claim, readOnly }: { claim: Claim; readOnly?: boolean }) {
+  const p = payoutOf(claim);
+  const cards = [
+    { type: 'Cashless' as const, lines: [['Customer pays garage at delivery', p.customer], ['Insurer pays garage directly', p.insurer]], foot: `Garage waits for ${inr(p.insurer)} from the insurer. Customer's final cost: ${inr(p.customer)}.` },
+    { type: 'Reimbursement' as const, lines: [['Customer pays garage at delivery', p.total], ['Insurer pays customer back', p.insurer]], foot: `Garage collects the full ${inr(p.total)}. Customer's final cost: ${inr(p.customer)}.` },
+  ];
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {cards.map((c) => {
+        const on = claim.type === c.type;
+        return (
+          <button key={c.type} type="button" disabled={readOnly} aria-pressed={on} onClick={() => updateClaim(claim.id, { type: c.type })} className={cn('rounded-2xl p-4 text-left transition', on ? 'bg-coral-50 ring-1 ring-coral-300' : 'neu-sm')}>
+            <span className="flex items-center justify-between gap-2"><span className="font-bold">{c.type}</span>{on && <StatusBadge tone="coral" size="sm">This claim</StatusBadge>}</span>
+            <span className="mt-3 block space-y-2">
+              {c.lines.map(([k, v]) => <span key={k as string} className="flex justify-between gap-3 text-sm"><span className="text-ink-600">{k}</span><span className="font-bold">{inr(v as number)}</span></span>)}
+            </span>
+            <span className="mt-3 block text-xs text-ink-500">{c.foot}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

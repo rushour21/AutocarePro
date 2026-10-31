@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import clsx from 'clsx';
-import { Download, ReceiptText } from 'lucide-react';
+import { ReceiptText } from 'lucide-react';
+import { DocLink } from '@/components/features/Documents';
 import { ShareCard, useTrack } from '@/components/share/ShareKit';
 import { EmptyState, StatusBadge } from '@/components/ui';
 import { inr } from '@/lib/format';
@@ -66,7 +67,10 @@ export default function ShareInvoice() {
           ) : (
             <p className="neu-in-sm mt-3 p-4 text-sm text-ink-600">Payment is pending. <Link href="/login" className="font-semibold text-coral-600">Sign in</Link> to pay securely.</p>
           )}
-          <button onClick={() => window.print()} className="mx-auto mt-4 flex items-center gap-2 text-sm font-medium text-ink-700 hover:text-ink"><Download className="h-4 w-4" /> Download Invoice</button>
+          <div className="mt-4 flex flex-wrap justify-center gap-3">
+            <DocLink kind="invoice" docKey={job.trackingToken} className="btn btn-neu h-11 px-5 text-sm">Download Invoice</DocLink>
+            {paid && <DocLink kind="receipt" docKey={job.trackingToken} className="btn btn-neu h-11 px-5 text-sm">Download Receipt</DocLink>}
+          </div>
         </>
       ) : paid ? (
         <ul className="space-y-2.5">

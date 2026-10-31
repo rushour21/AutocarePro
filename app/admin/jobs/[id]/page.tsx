@@ -5,11 +5,14 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { CalendarClock, ChevronLeft, Link2, Phone, Plus, Wrench } from 'lucide-react';
 import { TopBar } from '@/components/layout/AppShell';
-import { JobStepper, TaskList } from '@/components/features/JobProgress';
+import { DocLink } from '@/components/features/Documents';
+import { BeforeAfter } from '@/components/features/BeforeAfter';
+import { CheckInSummary, JobFlowPanel } from '@/components/features/JobFlowPanel';
+import { AllTasks, CurrentTasks, JobStepper } from '@/components/features/JobProgress';
 import { NoAccess } from '@/components/features/NoAccess';
 import { Avatar, Button, Card, EmptyState, FilterTabs, Input, Modal, ProgressBar, Select, StatusBadge, Textarea, Toggle, VehicleImage, useToast } from '@/components/ui';
 import { ClaimWorkspace } from '@/components/features/insurance/ClaimWorkspace';
-import { addJobPhoto, addNote, addTask, decidePartRequest, reassignJob, sendMessage, setJobInsurance, setJobNotes, setJobStage } from '@/lib/actions';
+import { addNote, addTask, decidePartRequest, reassignJob, sendMessage, setJobInsurance, setJobNotes, setJobStage } from '@/lib/actions';
 import { getJobFor } from '@/lib/access';
 import { useSession } from '@/lib/auth';
 import { customerOf, estimateOfJob, inr, km, STAGE_LABEL, userOf, vehicleName, vehicleOf, estimateTotals } from '@/lib/format';
@@ -18,7 +21,6 @@ import type { Stage } from '@/lib/types';
 
 type Tab = 'overview' | 'inspection' | 'tasks' | 'parts' | 'photos' | 'messages' | 'history' | 'insurance';
 const STAGES: Stage[] = ['pending', 'inspection', 'diagnostics', 'in_repair', 'quality_check', 'ready', 'delivered'];
-const SAMPLE = ['disc-orange', 'disc-dark', 'garage-1', 'estimate-disc', 'bumper', 'pads-chat'].map((n) => `/assets/photos/${n}.jpg`);
 
 function Inner() {
   const { id } = useParams<{ id: string }>();
@@ -42,7 +44,6 @@ function Inner() {
   const est = estimateOfJob(db, job.id);
   const requests = db.partRequests.filter((r) => r.jobId === job.id);
   const thread = db.messages.filter((m) => m.channelId === `job-${job.id}`);
-  const allPhotos = [...new Set([...job.photos, ...job.points.flatMap((p) => p.photos)])];
 
   const open = (t: Tab) => {
     if (t === 'inspection') return router.push(`/admin/jobs/${job.id}/inspection`);
@@ -63,6 +64,8 @@ function Inner() {
             <Toggle checked={!!job.isInsurance} onChange={(on) => { setJobInsurance(job.id, on, user.name); setTab(on ? 'insurance' : 'overview'); }} label="Insurance job" />
             Insurance job
           </label>
+          <DocLink kind="job-card" docKey={job.trackingToken} className="btn btn-neu h-9 px-4 text-[13px]">Job card</DocLink>
+          {db.invoices.some((i) => i.jobId === job.id) && <DocLink kind="invoice" docKey={job.trackingToken} className="btn btn-neu h-9 px-4 text-[13px]">Invoice</DocLink>}
           <Button
             variant="neu"
             size="sm"
@@ -103,6 +106,8 @@ function Inner() {
 
       {tab === 'overview' && (
         <div className="space-y-5">
+          <JobFlowPanel job={job} by={user.name} staff="admin" onToast={toast.show} />
+          <CheckInSummary job={job} />
           <div className="grid gap-5 lg:grid-cols-[1.35fr_1fr]">
             <Card className="p-5">
               {v && <VehicleImage carKey={v.carKey} className="mx-auto h-[220px] w-full max-w-[420px]" alt={vehicleName(v)} />}
@@ -149,17 +154,17 @@ function Inner() {
             </Card>
           </div>
           <Card className="px-4 py-6 sm:px-8">
-            <JobStepper job={job} />
+            <JobStepper job={job} currentStyle="active" />
           </Card>
           <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
             <Card className="p-5">
-              <h2 className="mb-4 text-lg font-bold">Current Tasks ({job.tasks.length})</h2>
-              <TaskList jobId={job.id} tasks={job.tasks} canEdit />
+              <CurrentTasks job={job} canEdit />
             </Card>
             <Card className="flex flex-col p-5">
               <Textarea value={job.notes} onChange={(e) => setJobNotes(job.id, e.target.value)} placeholder="Add note..." className="!min-h-[170px] flex-1" aria-label="Job note" />
-              <Button className="mt-4 !h-14 text-base" onClick={() => { setNewStage(job.stage); setStatusOpen(true); }}>
-                Update Status
+              <div className="mt-4"><JobFlowPanel job={job} by={user.name} staff="admin" onToast={toast.show} compact /></div>
+              <Button variant="neu" size="lg" className="w-full" onClick={() => { setNewStage(job.stage); setStatusOpen(true); }}>
+                Change status manually
               </Button>
             </Card>
           </div>
@@ -169,7 +174,7 @@ function Inner() {
       {tab === 'tasks' && (
         <Card className="p-5">
           <h2 className="mb-4 text-lg font-bold">Tasks ({job.tasks.length})</h2>
-          <TaskList jobId={job.id} tasks={job.tasks} canEdit />
+          <AllTasks job={job} canEdit />
           <form className="mt-5 flex gap-3" onSubmit={(e) => { e.preventDefault(); addTask(job.id, taskTitle); setTaskTitle(''); }}>
             <Input value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} placeholder="Add a task…" aria-label="New task" />
             <Button type="submit" disabled={!taskTitle.trim()}><Plus className="h-4 w-4" /> Add</Button>
@@ -214,22 +219,7 @@ function Inner() {
         </div>
       )}
 
-      {tab === 'photos' && (
-        <div>
-          <div className="mb-4 flex justify-between">
-            <h2 className="text-lg font-bold">Photos ({allPhotos.length})</h2>
-            <Button size="sm" variant="blue" onClick={() => { addJobPhoto(job.id, SAMPLE.find((p) => !allPhotos.includes(p)) ?? SAMPLE[0]); toast.show('Photo added'); }}><Plus className="h-4 w-4" /> Add Photo</Button>
-          </div>
-          {allPhotos.length === 0 ? <EmptyState title="No photos yet" /> : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {allPhotos.map((p) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={p} src={p} alt="" className="aspect-[4/3] w-full rounded-2xl object-cover shadow-neu-sm" />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {tab === 'photos' && <Card className="p-5"><h2 className="mb-4 text-lg font-bold">Before and after photos</h2><BeforeAfter job={job} by={user.name} onError={toast.show} /></Card>}
 
       {tab === 'messages' && (
         <Card className="p-5">
@@ -299,6 +289,7 @@ function Inner() {
           <label className="block text-xs font-medium text-ink-500">Note (optional)
             <Textarea value={note} onChange={(e) => setNote(e.target.value)} className="mt-1.5" />
           </label>
+          {job.checkin && !job.clientApproval && ['in_repair', 'quality_check', 'ready', 'delivered'].includes(newStage) && <p className="text-xs font-medium text-bad">The client has not approved this job yet.</p>}
           <p className="text-xs text-ink-400">The customer is notified when a job moves to repair, quality check or ready.</p>
         </div>
       </Modal>

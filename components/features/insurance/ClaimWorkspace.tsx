@@ -6,25 +6,31 @@ import { CheckCircle2, ExternalLink, FileText, Link2, Loader2, Phone } from 'luc
 import { Button, Card, Modal, Select, StatusBadge, useToast } from '@/components/ui';
 import { generateClaimPack, setClaimStatus } from '@/lib/actions';
 import { customerOf, inr, vehicleName, vehicleOf } from '@/lib/format';
-import { daysOpen, flowFor, fmtAt, fmtDate, missingDocs, splitOf } from '@/lib/insurance';
+import { claimPending, daysOpen, flowFor, fmtAt, fmtDate, missingDocs, payoutOf, splitOf } from '@/lib/insurance';
+import { useSession } from '@/lib/auth';
+import { DocLink } from '@/components/features/Documents';
+import { BeforeAfter } from '@/components/features/BeforeAfter';
 import { useDb } from '@/lib/store';
 import type { Claim } from '@/lib/types';
-import { ClaimDetails, ClaimStatusBadge, ClaimTimeline, DocChecklist, EstimateSplit, PhotoChecklist, Section, SlaList } from './ClaimParts';
+import { ClaimDetails, ClaimStatusBadge, ClaimTimeline, DocChecklist, EstimateSplit, PayoutSplit, PhotoChecklist, Section, SlaList } from './ClaimParts';
+import { RepairBrief, RepairDetails } from './RepairDetails';
 
 export const surveyorPath = (id: string) => `/surveyor/claim/${id}`;
 
 /* ---------------------------------------------------------------- claim pack (mock PDF) */
-function PackPreview({ claim }: { claim: Claim }) {
+function PackPreview({ claim, draft }: { claim: Claim; draft: boolean }) {
   const db = useDb();
   const job = db.jobs.find((j) => j.id === claim.jobId);
   const v = job && vehicleOf(db, job.vehicleId);
   const c = job && customerOf(db, job.customerId);
   const s = splitOf(claim);
   const shots = claim.photos.filter((p) => p.uploaded).slice(0, 4);
+  const pay = payoutOf(claim);
+  const pending = claimPending(claim);
   return (
     <div className="mx-auto w-full max-w-[420px] rounded-md bg-white p-4 text-[11px] leading-4 text-ink shadow-[0_10px_30px_rgba(60,40,20,0.18)] ring-1 ring-black/5 sm:p-5">
       <div className="flex items-start justify-between border-b border-ivory-300 pb-2">
-        <div><p className="text-[13px] font-bold">Claim pack</p><p className="text-ink-500">{claim.id} · {claim.insurer}</p></div>
+        <div><p className="text-[13px] font-bold">Claim pack{draft ? ' (draft)' : ''}</p><p className="text-ink-500">{claim.id} · {claim.insurer}</p></div>
         <p className="text-right text-ink-500">{fmtDate(claim.accidentDate)}<br />{claim.type}</p>
       </div>
       <div className="grid grid-cols-2 gap-x-3 gap-y-1 border-b border-ivory-300 py-2">
@@ -33,6 +39,10 @@ function PackPreview({ claim }: { claim: Claim }) {
         <p><span className="text-ink-400">Policy</span><br /><b>{claim.policyNo || '-'}</b></p>
         <p><span className="text-ink-400">Claim no.</span><br /><b>{claim.claimNo || '-'}</b></p>
       </div>
+      {draft && pending.length > 0 && (
+        <div className="mt-2 rounded bg-warn-soft p-2 text-warn-strong"><p className="font-bold">Pending ({pending.length})</p><ul>{pending.map((x) => <li key={x.item}>{x.item}</li>)}</ul></div>
+      )}
+      {job && <><p className="mb-1 mt-2 font-bold">Repair details</p><RepairBrief job={job} /></>}
       <p className="mb-1 mt-2 font-bold">Photos ({claim.photos.filter((p) => p.uploaded).length})</p>
       <div className="grid grid-cols-4 gap-1">
         {shots.map((p) => (
@@ -50,13 +60,18 @@ function PackPreview({ claim }: { claim: Claim }) {
           ))}
           <tr className="border-t border-ivory-300 font-bold"><td className="pt-1">Insurance pays</td><td className="pt-1 text-right">{inr(s.insurance)}</td></tr>
           <tr className="font-bold"><td>Customer pays</td><td className="text-right">{inr(s.customer)}</td></tr>
+          {claim.type === 'Cashless' ? (
+            <tr><td colSpan={2} className="pt-1 text-ink-600">Cashless: insurer pays the garage {inr(pay.insurer)}, customer pays the garage {inr(pay.customer)}.</td></tr>
+          ) : (
+            <tr><td colSpan={2} className="pt-1 text-ink-600">Reimbursement: customer pays the garage {inr(pay.total)}, insurer pays the customer back {inr(pay.insurer)}.</td></tr>
+          )}
         </tbody>
       </table>
     </div>
   );
 }
 
-function ClaimPackModal({ claim, open, onClose, onToast }: { claim: Claim; open: boolean; onClose: () => void; onToast: (m: string) => void }) {
+function ClaimPackModal({ claim, open, draft, onClose, onToast }: { claim: Claim; open: boolean; draft: boolean; onClose: () => void; onToast: (m: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -64,7 +79,7 @@ function ClaimPackModal({ claim, open, onClose, onToast }: { claim: Claim; open:
     setBusy(true);
     setReady(false);
     const t = setTimeout(() => {
-      generateClaimPack(claim.id);
+      if (!draft) generateClaimPack(claim.id);
       setBusy(false);
       setReady(true);
     }, 1400);
@@ -81,7 +96,7 @@ function ClaimPackModal({ claim, open, onClose, onToast }: { claim: Claim; open:
       footer={
         <>
           <Button variant="neu" onClick={onClose}>Close</Button>
-          <Button disabled={!ready} onClick={() => { navigator.clipboard?.writeText(link); onToast('Surveyor link copied'); }}><Link2 className="h-4 w-4" /> Copy surveyor link</Button>
+          {!draft && <Button disabled={!ready} onClick={() => { navigator.clipboard?.writeText(link); onToast('Surveyor link copied'); }}><Link2 className="h-4 w-4" /> Copy surveyor link</Button>}
         </>
       }
     >
@@ -92,9 +107,13 @@ function ClaimPackModal({ claim, open, onClose, onToast }: { claim: Claim; open:
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex items-center justify-center gap-2 rounded-2xl bg-ok-soft py-3 text-base font-semibold text-ok" role="status"><CheckCircle2 className="h-5 w-5" /> Claim pack ready ✓</div>
-          <p className="text-center text-sm text-ink-500">Sent to surveyor {claim.surveyorName || 'on assignment'}. Preview (demo PDF):</p>
-          <PackPreview claim={claim} />
+          {draft ? (
+            <div className="rounded-2xl bg-warn-soft py-3 text-center text-base font-semibold text-warn-strong" role="status">Draft only. Not sent to the surveyor.</div>
+          ) : (
+            <div className="flex items-center justify-center gap-2 rounded-2xl bg-ok-soft py-3 text-base font-semibold text-ok" role="status"><CheckCircle2 className="h-5 w-5" /> Claim pack ready ✓</div>
+          )}
+          <p className="text-center text-sm text-ink-500">{draft ? 'Clear the pending items to send it.' : `Sent to surveyor ${claim.surveyorName || 'on assignment'}.`} Preview (demo PDF):</p>
+          <PackPreview claim={claim} draft={draft} />
         </div>
       )}
     </Modal>
@@ -105,6 +124,7 @@ function ClaimPackModal({ claim, open, onClose, onToast }: { claim: Claim; open:
 export function ClaimWorkspace({ claimId, embedded }: { claimId: string; embedded?: boolean }) {
   const db = useDb();
   const toast = useToast();
+  const { user } = useSession();
   const [pack, setPack] = useState(false);
   const claim = db.claims.find((c) => c.id === claimId);
   if (!claim) return <Card className="p-8 text-center text-ink-500">Claim not found.</Card>;
@@ -112,7 +132,8 @@ export function ClaimWorkspace({ claimId, embedded }: { claimId: string; embedde
   const v = job && vehicleOf(db, job.vehicleId);
   const cust = job && customerOf(db, job.customerId);
   const missing = missingDocs(claim);
-  const blocked = missing.length > 0 || claim.lines.length === 0;
+  const pending = claimPending(claim);
+  const draft = pending.some((p) => p.blocks);
 
   return (
     <div className="space-y-5">
@@ -138,8 +159,8 @@ export function ClaimWorkspace({ claimId, embedded }: { claimId: string; embedde
                 {flowFor(claim.type).map((s) => <option key={s}>{s}</option>)}
               </Select>
             </label>
-            <Button disabled={blocked} onClick={() => setPack(true)}><FileText className="h-4 w-4" /> {claim.packAt ? 'Regenerate claim pack' : 'Generate claim pack'}</Button>
-            {blocked && <p className="max-w-[16rem] text-xs text-ink-500">{missing.length ? `Upload ${missing.length} missing required document${missing.length > 1 ? 's' : ''}` : 'Add estimate lines'} to generate the pack.</p>}
+            <Button onClick={() => setPack(true)}><FileText className="h-4 w-4" /> {draft ? 'Generate draft pack' : claim.packAt ? 'Regenerate claim pack' : 'Generate claim pack'}</Button>
+            {job && <DocLink kind="claim" docKey={job.trackingToken} className="btn btn-neu h-11 px-5 text-sm">Download claim pack</DocLink>}
             {claim.packAt && (
               <Link href={surveyorPath(claim.id)} target="_blank" className="inline-flex items-center gap-1.5 text-xs font-medium text-coral-600"><ExternalLink className="h-3.5 w-3.5" /> Open surveyor view</Link>
             )}
@@ -151,6 +172,16 @@ export function ClaimWorkspace({ claimId, embedded }: { claimId: string; embedde
           <p className="mt-4 rounded-xl bg-warn-soft px-3 py-2 text-sm text-warn">Customer has not approved their share of {inr(splitOf(claim).customer)} yet.</p>
         ) : null}
       </Card>
+
+      {job && <Section title="Before and after photos"><BeforeAfter job={job} by={user?.name ?? 'Team'} onError={toast.show} /></Section>}
+
+      {pending.length > 0 && (
+        <Section title={`Pending for this claim (${pending.length})`}>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {pending.map((p) => <li key={p.item} className="flex items-center justify-between gap-3 rounded-xl bg-ivory-100 px-3 py-2 text-sm"><span>{p.item}</span>{p.blocks && <StatusBadge tone="amber" size="sm">Needed to send</StatusBadge>}</li>)}
+          </ul>
+        </Section>
+      )}
 
       <div className="grid gap-5 xl:grid-cols-2">
         <div className="space-y-5">
@@ -164,12 +195,15 @@ export function ClaimWorkspace({ claimId, embedded }: { claimId: string; embedde
         </div>
         <div className="space-y-5">
           <Section title="Estimate split"><EstimateSplit claim={claim} /></Section>
+          <Section title="Cashless and reimbursement split"><PayoutSplit claim={claim} /></Section>
           <Section title="Timelines (reference)"><SlaList claim={claim} /></Section>
           <Section title="Claim timeline"><ClaimTimeline claim={claim} /></Section>
         </div>
       </div>
 
-      <ClaimPackModal claim={claim} open={pack} onClose={() => setPack(false)} onToast={toast.show} />
+      {job && <RepairDetails job={job} by={user?.name ?? 'Team'} />}
+
+      <ClaimPackModal claim={claim} open={pack} draft={draft} onClose={() => setPack(false)} onToast={toast.show} />
       {toast.node}
     </div>
   );

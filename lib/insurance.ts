@@ -75,6 +75,27 @@ export function splitOf(c: Pick<Claim, 'lines' | 'deductible' | 'depreciationPct
 /** What the insurer is expected to pay: the surveyor's approved amount when there is one, else the calculated share. */
 export const expectedFromInsurer = (c: Claim) => c.approvedAmount ?? splitOf(c).insurance;
 
+/** Who pays whom. Cashless and reimbursement split the same amounts, but the money moves differently. */
+export function payoutOf(c: Claim) {
+  const total = splitOf(c).total;
+  const insurer = Math.min(total, expectedFromInsurer(c));
+  const customer = total - insurer;
+  return { total, insurer, customer };
+}
+
+/** What is still needed before the claim can go to the surveyor, then what follows it. */
+export function claimPending(c: Claim): { item: string; blocks: boolean }[] {
+  return [
+    ...(c.lines.length === 0 ? [{ item: 'Add the repair estimate', blocks: true }] : []),
+    ...missingDocs(c).map((d) => ({ item: `Upload ${d.label}`, blocks: true })),
+    ...(c.policyNo ? [] : [{ item: 'Add the policy number', blocks: false }]),
+    ...(c.claimNo ? [] : [{ item: 'Add the claim number', blocks: false }]),
+    ...(c.surveyorName ? [] : [{ item: 'Add the surveyor details', blocks: false }]),
+    ...(c.photos.some((p) => p.stage === 'Intake' && !p.uploaded) ? [{ item: 'Finish the intake photos', blocks: false }] : []),
+    ...(c.lines.length > 0 && !c.customerApprovedAt ? [{ item: 'Get the customer to approve their share', blocks: false }] : []),
+  ];
+}
+
 /* ---------------------------------------------------------------- dates */
 const MS_DAY = 86_400_000;
 const parse = (iso: string) => new Date(iso.length === 10 ? `${iso}T00:00` : iso).getTime();
@@ -140,9 +161,9 @@ export function slaOf(c: Claim): SlaBadge[] {
 export const isOverdue = (c: Claim) => slaOf(c).some((b) => b.state === 'overdue');
 
 /* ---------------------------------------------------------------- receivables */
-/** Insurer money is owed once the claim is approved and until it is settled. */
+/** On a cashless claim, insurer money is owed once approved and until settled. On reimbursement the insurer pays the customer instead. */
 const OWED: ClaimStatus[] = ['Approved', 'In Repair', 'Re-inspection', 'DO Received', 'Delivered', 'Payment Pending'];
-export const isReceivable = (c: Claim) => OWED.includes(c.status);
+export const isReceivable = (c: Claim) => c.type === 'Cashless' && OWED.includes(c.status);
 export const pendingAmount = (c: Claim) => Math.max(0, expectedFromInsurer(c) - c.received);
 
 export interface InsurerRow {

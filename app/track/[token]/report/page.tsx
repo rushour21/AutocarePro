@@ -1,9 +1,10 @@
 'use client';
 
 import { Check, CheckCircle2 } from 'lucide-react';
+import { DocLink } from '@/components/features/Documents';
 import { Chip, Locked, ShareCard, useTrack } from '@/components/share/ShareKit';
 import { VehicleImage } from '@/components/ui';
-import { STEP_INDEX, userOf, vehicleName, vehicleOf } from '@/lib/format';
+import { STEP_INDEX, userOf, vehicleName, vehicleOf, phaseOf } from '@/lib/format';
 import { trackInfo } from '@/lib/track';
 import { useDb } from '@/lib/store';
 
@@ -26,7 +27,9 @@ export default function ShareReport() {
   const tech = userOf(db, job.techId);
   const start = job.startedLabel.split(',')[0];
   const end = (job.completedOn ?? job.estCompletionDate.split(',')[0]).replace(/\s/g, ' ');
-  const work = [...job.tasks.filter((t) => t.status === 'Completed' && !/final/i.test(t.title)).map((t) => done(t.title)), 'Checked suspension, tyres and fluids', 'Final quality check completed'];
+  const work = job.checkin
+    ? job.tasks.filter((t) => t.status === 'Completed' && phaseOf(t) === 'repair').map((t) => done(t.title))
+    : [...job.tasks.filter((t) => t.status === 'Completed' && !/final/i.test(t.title)).map((t) => done(t.title)), 'Checked suspension, tyres and fluids', 'Final quality check completed'];
   const half = Math.ceil(work.length / 2);
 
   return (
@@ -47,12 +50,13 @@ export default function ShareReport() {
           {[work.slice(0, half), work.slice(half)].map((col, i) => (
             <ul key={i} className={i ? 'sm:pl-8' : ''}>
               {col.map((w) => (
-                <li key={w} className="flex items-center gap-3 border-b border-ivory-300/50 py-3 text-sm last:border-0"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#2fcf8a] to-[#17a368] text-white"><Check className="h-4 w-4" strokeWidth={3} /></span>{w}</li>
+                <li key={w} className="flex items-center gap-3 border-b border-ivory-300/50 py-3 text-sm last:border-0"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#3fae90] to-[#248a6c] text-white"><Check className="h-4 w-4" strokeWidth={3} /></span>{w}</li>
               ))}
             </ul>
           ))}
         </div>
       </div>
+      <div className="mt-4 flex justify-center"><DocLink kind="inspection" docKey={job.trackingToken} className="btn btn-neu h-11 px-5 text-sm">Download Inspection Report</DocLink></div>
     </ShareCard>
   );
 }

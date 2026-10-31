@@ -3,392 +3,325 @@
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
-import { ArrowLeft, ArrowRight, ChevronRight, Cog, Droplets, Fan, Gauge, Paintbrush, Plus, ScanLine, Search, Settings2, Trash2, UserPlus, Wrench, Zap } from 'lucide-react';
+import { Camera, Check, CheckCircle2, MessageCircle, Plus, Search, Trash2, UserPlus, X } from 'lucide-react';
 import { TopBar } from '@/components/layout/AppShell';
-import { Button, Card, Field, Input, SearchInput, Select, Textarea, VehicleImage, useToast } from '@/components/ui';
-import { EstimateTotals } from '@/components/features/EstimateView';
-import { InspectionBoard } from '@/components/features/InspectionBoard';
-import { addCustomer, addVehicle, blankPoints, createEstimate, createJob, sendEstimate, updateEstimate } from '@/lib/actions';
-import { BODY_STYLES, MODELS, REG_RE, normReg } from '@/lib/catalog';
-import { customerOf, inr, km, vehicleName } from '@/lib/format';
+import { DayPicker } from '@/components/ui/DayPicker';
+import { Button, Card, Field, Input, SearchInput, Select, Textarea, VehicleImage } from '@/components/ui';
+import { addCustomer, addVehicle, checkInJob } from '@/lib/actions';
+import { BELONGINGS, FUEL_LEVELS, ISSUE_GROUPS, ISSUE_SUGGESTS, MODELS, REG_RE, SERVICE_CATALOG, VISIT_REASONS, normReg } from '@/lib/catalog';
+import { customerOf, estimateTotals, inr, km, vehicleName } from '@/lib/format';
+import { INSURERS, TODAY_ISO } from '@/lib/insurance';
 import { useDb } from '@/lib/store';
-import type { CarKey, EstimateItem, InspectionPoint, Job, Priority, Vehicle } from '@/lib/types';
+import type { ApprovalMethod, BroughtBy, CarKey, ClaimType, Job, Vehicle, VisitReason } from '@/lib/types';
 
-const STEPS = ['Vehicle', 'Service', 'Inspection', 'Estimate', 'Review'];
-const SERVICES: { key: string; label: string; cat: Job['serviceCategory']; icon: React.ElementType; lines: [string, string, number][] }[] = [
-  { key: 'general', label: 'General Service', cat: 'service', icon: Wrench, lines: [['Engine Oil & Filter', 'Parts + Labour', 4500], ['Labour - General Service', 'Labour', 2500]] },
-  { key: 'brake', label: 'Brake Service', cat: 'brake', icon: Gauge, lines: [['Brake Pad (Front)', 'Parts', 8500], ['Labour - Brake Service', 'Labour', 4000]] },
-  { key: 'engine', label: 'Engine Service', cat: 'service', icon: Cog, lines: [['Engine Oil & Filter', 'Parts + Labour', 4500], ['Labour - Engine Service', 'Labour', 6000]] },
-  { key: 'ac', label: 'AC Service', cat: 'ac', icon: Fan, lines: [['AC Filter Replacement', 'Parts + Labour', 3200], ['Refrigerant', 'Parts', 2400]] },
-  { key: 'susp', label: 'Suspension', cat: 'service', icon: Settings2, lines: [['Shock Absorber', 'Parts', 9000], ['Labour - Suspension', 'Labour', 3500]] },
-  { key: 'diag', label: 'Diagnostics', cat: 'service', icon: ScanLine, lines: [['Diagnostic scan', 'Labour', 1500]] },
-  { key: 'detail', label: 'Detailing', cat: 'body', icon: Droplets, lines: [['Detailing package', 'Labour', 6500]] },
-  { key: 'body', label: 'Body Repair', cat: 'body', icon: Paintbrush, lines: [['Panel repair & paint', 'Labour', 12000]] },
-  { key: 'custom', label: 'Custom Request', cat: 'service', icon: Zap, lines: [] },
-];
-const DAYS: [number, string][] = [[0, 'Today'], [1, 'Tomorrow'], [2, 'In 2 days'], [3, 'In 3 days'], [5, 'In 5 days']];
-const YEARS = [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015];
+const SIDES = ['Front', 'Back', 'Left', 'Right'];
+const SAMPLE = ['bumper', 'bumper-2', 'bumper-3', 'garage-1'].map((n) => `/assets/photos/${n}.jpg`);
+const NEEDS_ISSUES: VisitReason[] = ['repair', 'breakdown', 'repeat'];
 
-interface NewVehicleForm {
-  owner: 'new' | 'existing';
-  customerId: string;
+interface WorkLine {
   name: string;
-  phone: string;
-  email: string;
-  quick: string;
-  make: string;
-  model: string;
-  variant: string;
-  fuel: Vehicle['fuel'];
-  year: string;
-  reg: string;
-  odometer: string;
-  carKey: CarKey;
+  type: string;
+  amount: number;
+  cat: Job['serviceCategory'];
 }
-const EMPTY_NV = (customerId: string): NewVehicleForm => ({ owner: 'new', customerId, name: '', phone: '', email: '', quick: '', make: '', model: '', variant: '', fuel: 'Petrol', year: '2022', reg: '', odometer: '', carKey: 'bmw3' });
-const isFlagged = (p: InspectionPoint) => p.status === 'minor' || p.status === 'major';
 
-export default function NewJobPage() {
+function Tap({ on, onClick, children, className }: { on: boolean; onClick: () => void; children: React.ReactNode; className?: string }) {
+  return <button type="button" aria-pressed={on} onClick={onClick} className={clsx('rounded-xl px-3 py-2.5 text-sm font-medium transition', on ? 'bg-coral-50 text-coral-600 shadow-neu-in-sm ring-1 ring-coral-300' : 'neu-sm text-ink-600', className)}>{children}</button>;
+}
+
+function Part({ n, title, hint, children }: { n: number; title: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <Card className="p-4 sm:p-6">
+      <div className="mb-4 flex items-center gap-3">
+        <span className="btn-coral flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold">{n}</span>
+        <div><h2 className="text-lg font-bold leading-tight">{title}</h2>{hint && <p className="text-sm text-ink-500">{hint}</p>}</div>
+      </div>
+      {children}
+    </Card>
+  );
+}
+
+const toggle = <T,>(list: T[], x: T) => (list.includes(x) ? list.filter((i) => i !== x) : [...list, x]);
+
+export default function CheckInPage() {
   const db = useDb();
   const router = useRouter();
-  const toast = useToast();
-  const [step, setStep] = useState(1);
-  const [mode, setMode] = useState<'number' | 'customer' | 'new'>('number');
-  const [q, setQ] = useState('');
-  const [vehicleId, setVehicleId] = useState('');
-  const [nv, setNv] = useState<NewVehicleForm>(() => EMPTY_NV(db.customers[0]?.id ?? ''));
-  const [err, setErr] = useState<Record<string, string>>({});
-  const [service, setService] = useState('brake');
-  const [priority, setPriority] = useState<Priority>('Medium');
   const techs = db.users.filter((u) => u.role === 'technician' && u.title === 'Technician');
   const load = (id: string) => db.jobs.filter((j) => j.techId === id && j.stage !== 'delivered').length;
-  // default to the least-busy technician
-  const [techId, setTechId] = useState(() => [...techs].sort((a, b) => load(a.id) - load(b.id))[0]?.id ?? '');
-  const [due, setDue] = useState(2);
-  const [notes, setNotes] = useState('');
+
+  const [q, setQ] = useState('');
+  const [vehicleId, setVehicleId] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [nv, setNv] = useState({ reg: '', name: '', phone: '', quick: '', make: '', model: '', fuel: 'Petrol' as Vehicle['fuel'], carKey: 'bmw3' as CarKey });
+
+  const [reasons, setReasons] = useState<VisitReason[]>([]);
+  const [issues, setIssues] = useState<string[]>([]);
+  const [complaint, setComplaint] = useState('');
+  const [work, setWork] = useState<WorkLine[]>([]);
+  const [repeatOf, setRepeatOf] = useState('');
+  const [claiming, setClaiming] = useState(true);
+  const [claim, setClaim] = useState({ type: 'Cashless' as ClaimType, insurer: INSURERS[0] as string, policyNo: '', claimNo: '', accidentDate: TODAY_ISO });
+
+  const [odometer, setOdometer] = useState('');
   const [fuel, setFuel] = useState('1/2');
-  const [damage, setDamage] = useState('');
-  const [points, setPoints] = useState<InspectionPoint[]>(() => blankPoints());
-  const [lines, setLines] = useState<EstimateItem[]>([]);
-  const [skipEstimate, setSkip] = useState(false);
-  const [sendNow, setSendNow] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [broughtBy, setBroughtBy] = useState<BroughtBy>('Owner');
+  const [belongings, setBelongings] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<string[]>(['', '', '', '']);
+  const [due, setDue] = useState(1);
+  const [techId, setTechId] = useState(() => [...techs].sort((a, b) => load(a.id) - load(b.id))[0]?.id ?? '');
+  const [urgent, setUrgent] = useState(false);
+  const [approved, setApproved] = useState(false);
+  const [method, setMethod] = useState<ApprovalMethod>('In person');
+  const [err, setErr] = useState<Record<string, string>>({});
+  const [doneId, setDoneId] = useState('');
 
-  const creating = mode === 'new';
-  const draftVehicle: Vehicle = { id: 'draft', customerId: nv.owner === 'existing' ? nv.customerId : 'draft', make: nv.make.trim(), model: nv.model.trim(), variant: nv.variant.trim(), fuel: nv.fuel, reg: normReg(nv.reg), year: Number(nv.year), odometer: Number(nv.odometer.replace(/,/g, '')) || 0, carKey: nv.carKey };
-  const vehicle = creating ? draftVehicle : db.vehicles.find((v) => v.id === vehicleId);
-  const ownerName = !vehicle ? '' : creating && nv.owner === 'new' ? nv.name.trim() : customerOf(db, vehicle.customerId)?.name ?? '';
-  const flagged = points.filter(isFlagged);
-  const svc = SERVICES.find((s) => s.key === service)!;
-  const recent = useMemo(() => {
-    const seen = new Set<string>();
-    return db.jobs.map((j) => db.vehicles.find((v) => v.id === j.vehicleId)).filter((v): v is NonNullable<typeof v> => !!v && !seen.has(v.id) && !!seen.add(v.id)).slice(0, 5);
-  }, [db.jobs, db.vehicles]);
+  const vehicle = db.vehicles.find((v) => v.id === vehicleId);
+  const owner = vehicle && customerOf(db, vehicle.customerId);
   const results = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    if (!s) return recent;
-    return db.vehicles.filter((v) => (mode !== 'customer' ? v.reg.toLowerCase().includes(s.replace(/\s/g, '')) : (customerOf(db, v.customerId)?.name ?? '').toLowerCase().includes(s))).slice(0, 6);
-  }, [q, mode, db, recent]);
+    const s = q.trim().toLowerCase().replace(/\s/g, '');
+    if (!s) return [];
+    return db.vehicles.filter((v) => {
+      const c = customerOf(db, v.customerId);
+      return v.reg.toLowerCase().includes(s) || (c?.phone ?? '').replace(/\s/g, '').includes(s) || (c?.name ?? '').toLowerCase().replace(/\s/g, '').includes(s);
+    }).slice(0, 5);
+  }, [q, db]);
+  const pastJobs = vehicle ? db.jobs.filter((j) => j.vehicleId === vehicle.id && j.stage === 'delivered') : [];
+  const insurance = reasons.includes('accident') && claiming;
+  const totals = estimateTotals(work);
 
-  const validateNew = () => {
+  const pick = (v: Vehicle) => { setVehicleId(v.id); setOdometer(String(v.odometer)); setErr({}); };
+  const addWork = (name: string) => {
+    const s = SERVICE_CATALOG.find((x) => x.label === name)!;
+    setWork((w) => (w.some((x) => x.name === name) ? w.filter((x) => x.name !== name) : [...w, { name, type: s.type, amount: s.price, cat: s.cat }]));
+  };
+  const tapReason = (r: VisitReason) => {
+    const next = toggle(reasons, r);
+    setReasons(next);
+    if (r === 'breakdown' && next.includes(r)) { setUrgent(true); setBroughtBy('Towed in'); setMethod('Phone'); }
+  };
+  const tapIssue = (i: string) => {
+    const on = !issues.includes(i);
+    setIssues(toggle(issues, i));
+    const hint = ISSUE_SUGGESTS[i];
+    if (on && hint && !work.some((w) => w.name === hint)) addWork(hint);
+  };
+
+  const validate = () => {
     const e: Record<string, string> = {};
-    if (nv.owner === 'new') {
+    if (adding) {
+      if (!REG_RE.test(nv.reg.trim())) e.reg = 'Use a format like MH12AB1234';
+      else if (db.vehicles.some((v) => v.reg === normReg(nv.reg))) e.reg = 'This car is already saved. Search for it instead.';
       if (!nv.name.trim()) e.name = 'Enter the customer name';
       if (!/^[+\d][\d\s-]{7,}$/.test(nv.phone.trim())) e.phone = 'Enter a valid phone number';
-      if (nv.email.trim() && !/^\S+@\S+\.\S+$/.test(nv.email.trim())) e.email = 'Enter a valid email or leave it empty';
-    }
-    if (!nv.make.trim()) e.make = 'Enter the make';
-    if (!nv.model.trim()) e.model = 'Enter the model';
-    if (!REG_RE.test(nv.reg.trim())) e.reg = 'Use a format like MH12AB1234';
-    else if (db.vehicles.some((v) => v.reg === normReg(nv.reg))) e.reg = 'This registration is already saved. Search it by number instead.';
-    const odo = Number(nv.odometer.replace(/,/g, ''));
-    if (nv.odometer.trim() === '' || !Number.isFinite(odo) || odo < 0) e.odometer = 'Enter the odometer reading';
+      if (!nv.make.trim()) e.make = 'Enter the make';
+      if (!nv.model.trim()) e.model = 'Enter the model';
+    } else if (!vehicle) e.vehicle = 'Find the car first';
+    if (reasons.length === 0) e.reasons = 'Choose why the car has come in';
+    const odo = Number(odometer.replace(/,/g, ''));
+    if (!odometer.trim() || !Number.isFinite(odo) || odo < 0) e.odometer = 'Enter the odometer reading';
     return e;
   };
-  const quickPick = (key: string) => {
-    const m = MODELS.find((x) => x.key === key);
-    setNv(m ? { ...nv, quick: key, make: m.make, model: m.model, variant: m.variant, fuel: m.fuel, carKey: m.carKey } : { ...nv, quick: '' });
-  };
 
-  const validLines = lines.filter((l) => l.name.trim() && l.amount > 0);
-  const goNext = () => {
-    if (step === 1 && creating) {
-      const e = validateNew();
-      setErr(e);
-      if (Object.keys(e).length) return;
-    }
-    if (step === 2 && lines.length === 0 && svc.lines.length) setLines(svc.lines.map(([name, type, amount], i) => ({ id: `n${i}`, name, category: type === 'Labour' ? 'Labour' : 'Parts', type, amount })));
-    setStep((s) => Math.min(5, s + 1));
-  };
-  const create = () => {
-    if (!vehicle || busy) return;
-    if (creating && Object.keys(validateNew()).length) {
-      setErr(validateNew());
-      setStep(1);
+  const submit = () => {
+    const e = validate();
+    setErr(e);
+    if (Object.keys(e).length) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    setBusy(true);
-    let vid = vehicle.id;
-    if (creating) {
-      const cid = nv.owner === 'new' ? addCustomer({ name: nv.name.trim(), phone: nv.phone.trim(), email: nv.email.trim() }) : nv.customerId;
-      vid = addVehicle({ customerId: cid, make: nv.make.trim(), model: nv.model.trim(), variant: nv.variant.trim() || '—', fuel: nv.fuel, carKey: nv.carKey, reg: normReg(nv.reg), year: Number(nv.year), odometer: Number(nv.odometer.replace(/,/g, '')), serviceInDays: 90 });
+    let vid = vehicleId;
+    if (adding) {
+      const cid = addCustomer({ name: nv.name.trim(), phone: nv.phone.trim() });
+      vid = addVehicle({ customerId: cid, make: nv.make.trim(), model: nv.model.trim(), variant: '—', fuel: nv.fuel, carKey: nv.carKey, reg: normReg(nv.reg), year: 2022, odometer: Number(odometer.replace(/,/g, '')), serviceInDays: 90 });
     }
-    const id = createJob({ vehicleId: vid, service: svc.label, category: svc.cat, priority, techId, dueIn: due, notes: [notes, damage, `Fuel level: ${fuel}`].filter(Boolean).join(' · '), points, by: 'Admin' });
-    if (!skipEstimate && validLines.length) {
-      const eid = createEstimate(id);
-      updateEstimate(eid, validLines);
-      if (sendNow) sendEstimate(eid);
-    }
-    toast.show(`Job #${id} created`);
-    router.push(`/admin/jobs/${id}`);
+    setDoneId(checkInJob({
+      vehicleId: vid, techId, priority: urgent ? 'High' : 'Medium', dueIn: due, work,
+      checkin: { reasons, issues, complaint: complaint.trim(), odometer: Number(odometer.replace(/,/g, '')), fuel, broughtBy, belongings, photos: photos.filter(Boolean), repeatOf: repeatOf || undefined },
+      approval: approved ? method : undefined,
+      insurance: insurance ? claim : undefined,
+      by: 'Admin',
+    }));
+    window.scrollTo({ top: 0 });
   };
 
-  const stepper = (
-    <ol className="mb-6 grid grid-cols-5" aria-label="Steps">
-      {STEPS.map((s, i) => {
-        const n = i + 1;
-        const done = n < step;
-        const cur = n === step;
-        return (
-          <li key={s} className="relative flex flex-col items-center" aria-current={cur ? 'step' : undefined}>
-            {i < STEPS.length - 1 && <span className={clsx('absolute left-1/2 top-[17px] h-[2px] w-full', done ? 'bg-coral-300' : 'bg-ivory-300')} />}
-            <button
-              type="button"
-              disabled={n > step}
-              onClick={() => setStep(n)}
-              className={clsx('relative z-10 flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold transition', cur ? 'btn-coral' : done ? 'bg-coral-100 text-coral-600 shadow-neu-xs' : 'neu-sm !rounded-full text-ink-400')}
-            >
-              {n}
-            </button>
-            <span className={clsx('mt-2 text-sm', cur ? 'font-semibold text-coral-600' : 'text-ink-500')}>{s}</span>
-          </li>
-        );
-      })}
-    </ol>
-  );
-
-  const nav = (disabledNext?: boolean) => (
-    <div className="mt-6 flex justify-between">
-      <Button variant="neu" size="lg" onClick={() => (step === 1 ? router.push('/admin/jobs') : setStep(step - 1))}><ArrowLeft className="h-4 w-4" /> {step === 1 ? 'Cancel' : 'Back'}</Button>
-      {step < 5 ? <Button size="lg" onClick={goNext} disabled={disabledNext} className="min-w-[150px]">Next <ArrowRight className="h-4 w-4" /></Button> : <Button size="lg" onClick={create} disabled={busy} className="min-w-[170px]">Create Job</Button>}
-    </div>
-  );
+  const done = db.jobs.find((j) => j.id === doneId);
+  if (done) {
+    const c = customerOf(db, done.customerId);
+    const link = `${window.location.origin}/track/${done.trackingToken}`;
+    const text = `Hello ${c?.name ?? ''}, your car has been checked in at ${db.garage.name}. Job #${done.id}. Track it here: ${link}`;
+    return (
+      <>
+        <TopBar showUser />
+        <Card className="mx-auto max-w-[560px] p-6 text-center">
+          <CheckCircle2 className="mx-auto h-14 w-14 text-ok" />
+          <h1 className="mt-3 text-[24px] font-bold">Car checked in</h1>
+          <p className="mt-1 text-sm text-ink-500">Job #{done.id} is with {db.users.find((u) => u.id === done.techId)?.name}.</p>
+          {!done.clientApproval && <p className="neu-in-sm mt-4 p-3 text-sm text-warn-strong">Client approval is still pending. You can tick it on the job page.</p>}
+          <div className="mt-5 grid gap-3">
+            <a className="btn btn-coral h-12 gap-2 px-5 text-sm" href={`https://wa.me/${(c?.phone ?? '').replace(/\D/g, '')}?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /> Send tracking link on WhatsApp</a>
+            <Button size="lg" variant="neu" onClick={() => router.push(`/admin/jobs/${done.id}`)}>Open job</Button>
+          </div>
+        </Card>
+      </>
+    );
+  }
 
   return (
     <>
       <TopBar showUser />
-      <h1 className="mb-5 text-[26px] font-bold">Create New Job</h1>
-      {stepper}
+      <div className="mx-auto max-w-[860px] space-y-4">
+        <div>
+          <h1 className="text-[26px] font-bold">Check In a Car</h1>
+          <p className="text-sm text-ink-500">Record what you know now. The technician adds the rest after inspection.</p>
+        </div>
 
-      {step === 1 && (
-        <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
-          <div className="space-y-5">
-            <Card className="p-5">
-              <h2 className="mb-3 text-lg font-bold">{creating ? 'New Customer & Vehicle' : 'Search Vehicle'}</h2>
-              <div className="mb-3 grid grid-cols-3 gap-2" role="tablist" aria-label="Find or add a vehicle">
-                {([['number', 'By Number'], ['customer', 'By Customer'], ['new', 'New Vehicle']] as const).map(([m, label]) => (
-                  <button key={m} role="tab" aria-selected={mode === m} onClick={() => { setMode(m); setErr({}); }} className={clsx('flex h-11 items-center justify-center gap-1.5 rounded-xl px-2 text-sm font-semibold transition', mode === m ? 'tab-dark' : 'tab-idle')}>
-                    {m === 'new' && <UserPlus className="h-4 w-4" />} {label}
-                  </button>
-                ))}
+        <Part n={1} title="Find the car" hint="Search by car number, phone or name">
+          {vehicle ? (
+            <div className="neu-row flex items-center gap-4 px-4 py-3">
+              <VehicleImage carKey={vehicle.carKey} className="h-12 w-20 shrink-0" />
+              <div className="min-w-0 flex-1"><p className="truncate font-bold">{vehicleName(vehicle)} · {vehicle.reg}</p><p className="truncate text-sm text-ink-500">{owner?.name} · {owner?.phone} · {km(vehicle.odometer)}</p></div>
+              <button type="button" aria-label="Change car" onClick={() => { setVehicleId(''); setQ(''); }} className="btn btn-neu h-10 w-10 shrink-0 !rounded-full"><X className="h-4 w-4" /></button>
+            </div>
+          ) : adding ? (
+            <div className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Field label="Car number *" error={err.reg}><Input value={nv.reg} onChange={(e) => setNv({ ...nv, reg: e.target.value })} placeholder="MH12AB1234" autoCapitalize="characters" /></Field>
+                <Field label="Customer name *" error={err.name}><Input value={nv.name} onChange={(e) => setNv({ ...nv, name: e.target.value })} placeholder="Rohit Kumar" /></Field>
+                <Field label="Phone *" error={err.phone}><Input inputMode="tel" value={nv.phone} onChange={(e) => setNv({ ...nv, phone: e.target.value })} placeholder="+91 98765 43210" /></Field>
               </div>
-              {!creating ? (
-                <div className="flex gap-2.5">
-                  <SearchInput value={q} onChange={setQ} placeholder={mode === 'number' ? 'Enter registration number (e.g. MH12AB1234)' : 'Enter customer name'} className="flex-1 !h-11" />
-                  <Button className="!h-11 px-5" aria-label="Search"><Search className="h-4 w-4" /> <span className="hidden sm:inline">Search</span></Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <p className="mb-2 text-sm font-semibold">Owner</p>
-                    <div className="mb-3 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Owner">
-                      {([['new', 'New customer'], ['existing', 'Existing customer']] as const).map(([o, label]) => (
-                        <button key={o} role="radio" aria-checked={nv.owner === o} onClick={() => setNv({ ...nv, owner: o })} className={clsx('h-10 rounded-xl text-sm font-semibold transition', nv.owner === o ? 'tab-dark' : 'tab-idle')}>{label}</button>
-                      ))}
-                    </div>
-                    {nv.owner === 'new' ? (
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <Field label="Full name *" error={err.name}><Input value={nv.name} onChange={(e) => setNv({ ...nv, name: e.target.value })} placeholder="e.g. Rohit Kumar" autoComplete="off" /></Field>
-                        <Field label="Phone *" error={err.phone}><Input inputMode="tel" value={nv.phone} onChange={(e) => setNv({ ...nv, phone: e.target.value })} placeholder="+91 98765 43210" /></Field>
-                        <Field label="Email (optional)" error={err.email} className="sm:col-span-2"><Input type="email" value={nv.email} onChange={(e) => setNv({ ...nv, email: e.target.value })} placeholder="name@example.com" /></Field>
-                      </div>
-                    ) : (
-                      <Field label="Customer"><Select value={nv.customerId} onChange={(e) => setNv({ ...nv, customerId: e.target.value })}>{db.customers.map((c) => <option key={c.id} value={c.id}>{c.name} · {c.phone}</option>)}</Select></Field>
-                    )}
-                  </div>
-                  <div>
-                    <p className="mb-2 text-sm font-semibold">Vehicle</p>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <Field label="Quick pick" className="sm:col-span-2">
-                        <Select value={nv.quick} onChange={(e) => quickPick(e.target.value)}>
-                          <option value="">Other / enter manually</option>
-                          {MODELS.map((m) => <option key={m.key} value={m.key}>{m.make} {m.model} · {m.variant}</option>)}
-                        </Select>
-                      </Field>
-                      <Field label="Make *" error={err.make}><Input value={nv.make} onChange={(e) => setNv({ ...nv, make: e.target.value, quick: '' })} placeholder="e.g. Honda" /></Field>
-                      <Field label="Model *" error={err.model}><Input value={nv.model} onChange={(e) => setNv({ ...nv, model: e.target.value, quick: '' })} placeholder="e.g. City" /></Field>
-                      <Field label="Variant (optional)"><Input value={nv.variant} onChange={(e) => setNv({ ...nv, variant: e.target.value })} placeholder="e.g. ZX CVT" /></Field>
-                      <Field label="Fuel"><Select value={nv.fuel} onChange={(e) => setNv({ ...nv, fuel: e.target.value as Vehicle['fuel'] })}>{['Petrol', 'Diesel', 'Hybrid', 'Electric'].map((f) => <option key={f}>{f}</option>)}</Select></Field>
-                      <Field label="Registration number *" error={err.reg}><Input value={nv.reg} onChange={(e) => setNv({ ...nv, reg: e.target.value })} placeholder="MH12AB1234" autoCapitalize="characters" /></Field>
-                      <Field label="Year"><Select value={nv.year} onChange={(e) => setNv({ ...nv, year: e.target.value })}>{YEARS.map((y) => <option key={y}>{y}</option>)}</Select></Field>
-                      <Field label="Odometer (km) *" error={err.odometer}><Input inputMode="numeric" value={nv.odometer} onChange={(e) => setNv({ ...nv, odometer: e.target.value })} placeholder="42,500" /></Field>
-                      <Field label="Picture"><Select value={nv.carKey} onChange={(e) => setNv({ ...nv, carKey: e.target.value as CarKey })}>{BODY_STYLES.map((b) => <option key={b.carKey} value={b.carKey}>{b.label}</option>)}</Select></Field>
-                    </div>
-                  </div>
-                  <p className="text-xs text-ink-400">The customer and vehicle are saved when you create the job.</p>
-                </div>
-              )}
-            </Card>
-            {!creating && (
-              <Card className="p-5">
-                <h2 className="mb-3 text-base font-bold">{q ? 'Results' : 'Recent Vehicles'}</h2>
-                <ul className="space-y-2">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Field label="Quick pick"><Select value={nv.quick} onChange={(e) => { const m = MODELS.find((x) => x.key === e.target.value); setNv(m ? { ...nv, quick: m.key, make: m.make, model: m.model, fuel: m.fuel, carKey: m.carKey } : { ...nv, quick: '' }); }}><option value="">Other</option>{MODELS.map((m) => <option key={m.key} value={m.key}>{m.make} {m.model}</option>)}</Select></Field>
+                <Field label="Make *" error={err.make}><Input value={nv.make} onChange={(e) => setNv({ ...nv, make: e.target.value, quick: '' })} placeholder="Honda" /></Field>
+                <Field label="Model *" error={err.model}><Input value={nv.model} onChange={(e) => setNv({ ...nv, model: e.target.value, quick: '' })} placeholder="City" /></Field>
+              </div>
+              <Button variant="neu" size="sm" onClick={() => setAdding(false)}><Search className="h-4 w-4" /> Search saved cars instead</Button>
+            </div>
+          ) : (
+            <>
+              <SearchInput value={q} onChange={setQ} placeholder="MH12AB1234, 98765 or customer name" className="!h-12" />
+              {err.vehicle && <p className="mt-2 text-xs text-bad">{err.vehicle}</p>}
+              {results.length > 0 && (
+                <ul className="mt-3 space-y-2">
                   {results.map((v) => (
                     <li key={v.id}>
-                      <button onClick={() => setVehicleId(v.id)} aria-pressed={vehicleId === v.id} className={clsx('neu-row flex w-full items-center gap-4 px-4 py-2.5 text-left transition', vehicleId === v.id && 'ring-2 ring-coral-300')}>
-                        <VehicleImage carKey={v.carKey} className="h-10 w-[72px]" />
-                        <span className="flex-1"><span className="block text-sm font-bold">{vehicleName(v)}</span><span className="block text-xs text-ink-400">{v.reg} · {customerOf(db, v.customerId)?.name}</span></span>
-                        <ChevronRight className={clsx('h-4 w-4', vehicleId === v.id ? 'text-ok' : 'text-ink-300')} strokeWidth={3} />
+                      <button type="button" onClick={() => pick(v)} className="neu-row flex w-full items-center gap-4 px-4 py-2.5 text-left">
+                        <VehicleImage carKey={v.carKey} className="h-10 w-[72px] shrink-0" />
+                        <span className="min-w-0"><span className="block truncate text-sm font-bold">{v.reg} · {vehicleName(v)}</span><span className="block truncate text-xs text-ink-400">{customerOf(db, v.customerId)?.name} · {customerOf(db, v.customerId)?.phone}</span></span>
                       </button>
                     </li>
                   ))}
-                  {results.length === 0 && (
-                    <li className="flex flex-col items-center gap-3 py-6 text-center text-sm text-ink-400">
-                      No vehicle found.
-                      <Button variant="blue" size="sm" onClick={() => { setNv({ ...EMPTY_NV(db.customers[0]?.id ?? ''), reg: mode === 'number' ? q.toUpperCase() : '' }); setMode('new'); }}><UserPlus className="h-4 w-4" /> Add as a new customer / vehicle</Button>
-                    </li>
-                  )}
                 </ul>
-              </Card>
-            )}
-          </div>
-          <Card className="flex flex-col p-5">
-            <h2 className="mb-3 text-lg font-bold">Vehicle Details</h2>
-            {vehicle ? (
-              <>
-                <div className="rounded-2xl bg-white/50 px-4 py-3"><VehicleImage carKey={vehicle.carKey} className="mx-auto h-[190px] w-full max-w-[340px]" /></div>
-                <dl className="mt-3 divide-y divide-ivory-300/60 text-sm">
-                  {[['Make', vehicle.make || '—'], ['Model', vehicle.model || '—'], ['Registration', vehicle.reg || '—'], ['Year', String(vehicle.year)], ['Fuel', vehicle.fuel], ['Odometer', vehicle.odometer ? km(vehicle.odometer) : '—'], ['Owner', ownerName || '—']].map(([k, v]) => (
-                    <div key={k} className="flex justify-between px-2 py-3"><dt className="text-ink-500">{k}</dt><dd className="font-semibold">{v}</dd></div>
-                  ))}
-                </dl>
-                {creating && nv.owner === 'new' && <p className="mt-1 px-2 text-xs font-semibold text-coral-600">New customer — will be added with this job</p>}
-              </>
-            ) : (
-              <div className="neu-in flex flex-1 flex-col items-center justify-center gap-2 py-16 text-center text-sm text-ink-400">Select a vehicle to see its details,<br />or add a new customer and vehicle.</div>
-            )}
-            <div className="mt-auto flex justify-end pt-5"><Button size="lg" onClick={goNext} disabled={!vehicle} className="min-w-[170px]">Next <ArrowRight className="h-4 w-4" /></Button></div>
-          </Card>
-        </div>
-      )}
+              )}
+              {q.trim() && results.length === 0 && <p className="mt-3 text-sm text-ink-500">No saved car found.</p>}
+              <Button variant="blue" size="sm" className="mt-3" onClick={() => { setAdding(true); setNv({ ...nv, reg: /\d/.test(q) && /[a-z]/i.test(q) ? q.toUpperCase() : '' }); }}><UserPlus className="h-4 w-4" /> Add new customer and car</Button>
+            </>
+          )}
+        </Part>
 
-      {step === 2 && (
-        <Card className="p-5 sm:p-6">
-          <h2 className="mb-4 text-lg font-bold">Service Type</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Service type">
-            {SERVICES.map(({ key, label, icon: Icon }) => (
-              <button key={key} role="radio" aria-checked={service === key} onClick={() => { setService(key); setLines([]); }} className={clsx('flex h-[76px] flex-col items-center justify-center gap-2 rounded-2xl text-sm font-medium transition', service === key ? 'bg-coral-50 text-coral-600 shadow-neu-in-sm ring-1 ring-coral-300' : 'neu-sm text-ink-600')}>
-                <Icon className="h-5 w-5" strokeWidth={1.8} /> {label}
-              </button>
-            ))}
+        <Part n={2} title="Why has the car come in?" hint="Choose all that apply">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+            {VISIT_REASONS.map((r) => <Tap key={r.key} on={reasons.includes(r.key)} onClick={() => tapReason(r.key)} className="!py-3 text-left"><span className="block font-semibold">{r.label}</span><span className="block text-xs font-normal text-ink-400">{r.hint}</span></Tap>)}
           </div>
-          <div className="mt-6 grid gap-5 sm:grid-cols-2">
-            <Field label="Priority">
-              <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Priority">
-                {(['Low', 'Medium', 'High'] as Priority[]).map((p) => (
-                  <button key={p} role="radio" aria-checked={priority === p} onClick={() => setPriority(p)} className={clsx('h-11 rounded-xl text-sm font-semibold transition', priority === p ? (p === 'High' ? 'btn-coral' : 'tab-dark') : 'tab-idle')}>{p}</button>
+          {err.reasons && <p className="mt-2 text-xs text-bad">{err.reasons}</p>}
+
+          {reasons.some((r) => NEEDS_ISSUES.includes(r)) && (
+            <div className="mt-5">
+              <h3 className="mb-2 text-sm font-bold">What does the customer notice?</h3>
+              <div className="space-y-3">
+                {ISSUE_GROUPS.map((g) => (
+                  <div key={g.area}><p className="mb-1.5 text-xs font-medium text-ink-400">{g.area}</p><div className="flex flex-wrap gap-2">{g.issues.map((i) => <Tap key={i} on={issues.includes(i)} onClick={() => tapIssue(i)}>{i}</Tap>)}</div></div>
                 ))}
               </div>
-            </Field>
-            <Field label="Promised delivery"><Select value={due} onChange={(e) => setDue(Number(e.target.value))}>{DAYS.map(([d, l]) => <option key={d} value={d}>{l}</option>)}</Select></Field>
-            <Field label="Assign technician"><Select value={techId} onChange={(e) => setTechId(e.target.value)}>{techs.map((t) => <option key={t.id} value={t.id}>{t.name} — {db.jobs.filter((j) => j.techId === t.id && j.stage !== 'delivered').length} active jobs</option>)}</Select></Field>
-            <Field label="Customer complaint / notes" className="sm:col-span-2"><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="What did the customer report?" /></Field>
-          </div>
-          {nav()}
-        </Card>
-      )}
+            </div>
+          )}
 
-      {step === 3 && vehicle && (
-        <div className="space-y-5">
-          <Card className="p-5 sm:p-6">
-            <h2 className="mb-1 text-lg font-bold">Check-in inspection</h2>
-            <p className="mb-5 text-sm text-ink-500">Tap the car to mark the parts that have an issue, then choose the damage type, severity, notes and photos. Anything you don&apos;t touch stays &quot;Not checked&quot;.</p>
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Field label="Fuel level">
-                <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Fuel level">
-                  {['Empty', '1/4', '1/2', '3/4', 'Full'].map((f) => (
-                    <button key={f} role="radio" aria-checked={fuel === f} onClick={() => setFuel(f)} className={clsx('h-10 min-w-[60px] rounded-xl px-3 text-sm font-semibold', fuel === f ? 'tab-dark' : 'tab-idle')}>{f}</button>
-                  ))}
+          {reasons.includes('repeat') && pastJobs.length > 0 && (
+            <Field label="Earlier job" className="mt-4"><Select value={repeatOf} onChange={(e) => setRepeatOf(e.target.value)}><option value="">Not sure</option>{pastJobs.map((j) => <option key={j.id} value={j.id}>#{j.id} · {j.service}</option>)}</Select></Field>
+          )}
+
+          <Field label="Customer's words (optional)" className="mt-4"><Textarea value={complaint} onChange={(e) => setComplaint(e.target.value)} placeholder="e.g. Noise from front left when turning" className="!min-h-[64px]" /></Field>
+
+          {reasons.includes('accident') && (
+            <div className="neu-in-sm mt-4 p-4">
+              <p className="mb-2 text-sm font-bold">Is the customer claiming insurance?</p>
+              <div className="grid grid-cols-2 gap-2"><Tap on={claiming} onClick={() => setClaiming(true)}>Yes, insurance claim</Tap><Tap on={!claiming} onClick={() => setClaiming(false)}>No, customer pays</Tap></div>
+              {claiming && (
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <Field label="Insurer"><Select value={claim.insurer} onChange={(e) => setClaim({ ...claim, insurer: e.target.value })}>{INSURERS.map((i) => <option key={i}>{i}</option>)}</Select></Field>
+                  <Field label="Claim type"><Select value={claim.type} onChange={(e) => setClaim({ ...claim, type: e.target.value as ClaimType })}><option>Cashless</option><option>Reimbursement</option></Select></Field>
+                  <Field label="Policy number (can add later)"><Input value={claim.policyNo} onChange={(e) => setClaim({ ...claim, policyNo: e.target.value })} /></Field>
+                  <Field label="Claim number (can add later)"><Input value={claim.claimNo} onChange={(e) => setClaim({ ...claim, claimNo: e.target.value })} /></Field>
+                  <Field label="Accident date"><Input type="date" value={claim.accidentDate} max={TODAY_ISO} onChange={(e) => setClaim({ ...claim, accidentDate: e.target.value })} /></Field>
                 </div>
-              </Field>
-              <Field label="Other notes (optional)"><Textarea value={damage} onChange={(e) => setDamage(e.target.value)} placeholder="e.g. Customer left a spare key" className="!min-h-[44px]" /></Field>
-            </div>
-          </Card>
-          <InspectionBoard mode="admin" layout="split" draft={{ points, onChange: setPoints }} carKey={vehicle.carKey} />
-          <p className="text-sm text-ink-500" aria-live="polite">{flagged.length === 0 ? 'No areas flagged yet. You can continue if the vehicle has no visible issues.' : `${flagged.length} ${flagged.length === 1 ? 'area' : 'areas'} flagged: ${flagged.map((p) => p.label).join(', ')}`}</p>
-          {nav()}
-        </div>
-      )}
-
-      {step === 4 && (
-        <Card className="p-5 sm:p-6">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-bold">Estimate</h2>
-            <label className="flex items-center gap-2.5 text-sm"><input type="checkbox" checked={skipEstimate} onChange={(e) => setSkip(e.target.checked)} className="h-4 w-4 accent-[#f26a2e]" /> Skip — I&apos;ll create it later</label>
-          </div>
-          {flagged.length > 0 && (
-            <div className="neu-in-sm mb-4 px-4 py-3 text-sm">
-              <p className="mb-1 font-semibold">Flagged at check-in</p>
-              <ul className="space-y-0.5 text-ink-600">{flagged.map((p) => <li key={p.id}>{p.label} — {p.damage}, {p.severity}{p.notes ? ` (${p.notes})` : ''}</li>)}</ul>
+              )}
             </div>
           )}
-          <div className={clsx('space-y-2.5', skipEstimate && 'pointer-events-none opacity-40')}>
-            {lines.map((l, i) => (
-              <div key={l.id} className="grid grid-cols-[1fr_130px_auto] items-center gap-2 sm:grid-cols-[1.4fr_1fr_120px_auto]">
-                <Input aria-label="Item" value={l.name} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} placeholder="Item" className="col-span-3 sm:col-span-1" />
-                <Select aria-label="Type" value={l.type} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, type: e.target.value, category: e.target.value === 'Labour' ? 'Labour' : 'Parts' } : x)))}><option>Parts</option><option>Labour</option><option>Parts + Labour</option></Select>
-                <Input aria-label="Amount" inputMode="numeric" value={l.amount} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, amount: Number(e.target.value.replace(/\D/g, '')) || 0 } : x)))} />
-                <button aria-label="Remove line" onClick={() => setLines(lines.filter((_, j) => j !== i))} className="btn btn-neu h-10 w-10 !rounded-full text-bad"><Trash2 className="h-4 w-4" /></button>
-              </div>
-            ))}
-            <Button variant="blue" size="sm" onClick={() => setLines([...lines, { id: `n${Date.now()}`, name: '', category: 'Parts', type: 'Parts', amount: 0 }])}><Plus className="h-4 w-4" /> Add line</Button>
-          </div>
-          {!skipEstimate && lines.some((l) => l.name.trim() && l.amount <= 0) && <p className="mt-3 text-xs text-bad">Lines with no amount are left out of the estimate.</p>}
-          {!skipEstimate && validLines.length > 0 && <EstimateTotals items={validLines} className="mt-5" />}
-          {nav()}
-        </Card>
-      )}
 
-      {step === 5 && vehicle && (
-        <Card className="p-5 sm:p-6">
-          <h2 className="mb-4 text-lg font-bold">Review</h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="neu-row flex items-center gap-4 px-4 py-3"><VehicleImage carKey={vehicle.carKey} className="h-14 w-24" /><div><p className="font-bold">{vehicleName(vehicle)}</p><p className="text-sm text-ink-500">{vehicle.reg} · {ownerName}{creating && nv.owner === 'new' && <span className="ml-2 rounded-md bg-coral-100 px-1.5 py-0.5 text-[11px] font-semibold text-coral-600">New customer</span>}</p></div></div>
-            <dl className="neu-row space-y-1.5 px-4 py-3 text-sm">
-              <div className="flex justify-between"><dt className="text-ink-500">Service</dt><dd className="font-semibold">{svc.label}</dd></div>
-              <div className="flex justify-between"><dt className="text-ink-500">Priority</dt><dd className="font-semibold">{priority}</dd></div>
-              <div className="flex justify-between"><dt className="text-ink-500">Technician</dt><dd className="font-semibold">{techs.find((t) => t.id === techId)?.name}</dd></div>
-              <div className="flex justify-between"><dt className="text-ink-500">Delivery</dt><dd className="font-semibold">{DAYS.find(([d]) => d === due)?.[1]}</dd></div>
-              <div className="flex justify-between"><dt className="text-ink-500">Fuel level</dt><dd className="font-semibold">{fuel}</dd></div>
-              <div className="flex justify-between"><dt className="text-ink-500">Areas flagged</dt><dd className="font-semibold">{flagged.length}</dd></div>
-            </dl>
-          </div>
-          {flagged.length > 0 && (
-            <ul className="neu-in-sm mt-4 divide-y divide-ivory-300/50 p-2 text-sm" aria-label="Flagged areas">
-              {flagged.map((p) => <li key={p.id} className="flex justify-between gap-3 px-3 py-2"><span className="font-medium">{p.label}</span><span className="text-ink-500">{p.damage} · {p.severity}</span></li>)}
-            </ul>
-          )}
-          {!skipEstimate && validLines.length > 0 ? (
-            <div className="mt-4">
-              <ul className="neu-in-sm divide-y divide-ivory-300/50 p-2 text-sm">{validLines.map((l) => <li key={l.id} className="flex justify-between px-3 py-2"><span>{l.name}</span><span className="font-semibold">{inr(l.amount)}</span></li>)}</ul>
-              <EstimateTotals items={validLines} className="mt-3" />
-              <label className="mt-4 flex items-center gap-2.5 text-sm"><input type="checkbox" checked={sendNow} onChange={(e) => setSendNow(e.target.checked)} className="h-4 w-4 accent-[#f26a2e]" /> Send the estimate to the customer now</label>
+          <div className="mt-5">
+            <h3 className="mb-2 text-sm font-bold">Work the customer asked for <span className="font-normal text-ink-400">(optional)</span></h3>
+            <div className="flex flex-wrap gap-2">
+              {SERVICE_CATALOG.map((s) => {
+                const on = work.some((w) => w.name === s.label);
+                return <Tap key={s.label} on={on} onClick={() => addWork(s.label)}><span className="inline-flex items-center gap-1.5">{on ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : <Plus className="h-3.5 w-3.5" />}{s.label}</span></Tap>;
+              })}
             </div>
-          ) : <p className="mt-4 text-sm text-ink-500">No estimate will be created with this job.</p>}
-          {nav()}
-        </Card>
-      )}
-      {toast.node}
+            {work.length > 0 && (
+              <ul className="mt-3 space-y-2">
+                {work.map((w) => (
+                  <li key={w.name} className="neu-row flex items-center gap-2 px-3 py-2">
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{w.name}</span>
+                    <Input aria-label={`${w.name} amount`} inputMode="numeric" className="!h-10 !w-[100px] text-right" value={w.amount} onChange={(e) => setWork(work.map((x) => (x.name === w.name ? { ...x, amount: Number(e.target.value.replace(/\D/g, '')) || 0 } : x)))} />
+                    <button type="button" aria-label={`Remove ${w.name}`} onClick={() => addWork(w.name)} className="btn btn-neu h-10 w-10 shrink-0 !rounded-full text-bad"><Trash2 className="h-4 w-4" /></button>
+                  </li>
+                ))}
+                <li className="flex justify-between px-3 pt-1 text-sm font-bold"><span>Approx. total with GST</span><span>{inr(totals.total)}</span></li>
+              </ul>
+            )}
+          </div>
+        </Part>
+
+        <Part n={3} title="Record and confirm">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Odometer (km) *" error={err.odometer}><Input inputMode="numeric" value={odometer} onChange={(e) => setOdometer(e.target.value)} placeholder="42500" /></Field>
+            <Field label="Fuel level"><div className="grid grid-cols-5 gap-1.5">{FUEL_LEVELS.map((f) => <Tap key={f} on={fuel === f} onClick={() => setFuel(f)} className="!px-1 text-xs">{f}</Tap>)}</div></Field>
+            <Field label="Brought in by"><div className="grid grid-cols-3 gap-1.5">{(['Owner', 'Driver', 'Towed in'] as BroughtBy[]).map((b) => <Tap key={b} on={broughtBy === b} onClick={() => { setBroughtBy(b); if (b !== 'Owner') setMethod('Phone'); }} className="!px-1">{b}</Tap>)}</div></Field>
+            <DayPicker label="Promised delivery" value={due} onChange={setDue} todayIso={TODAY_ISO} />
+            <Field label="Technician"><Select value={techId} onChange={(e) => setTechId(e.target.value)}>{techs.map((t) => <option key={t.id} value={t.id}>{t.name} · {load(t.id)} active jobs</option>)}</Select></Field>
+            <Field label="Priority"><div className="grid grid-cols-2 gap-1.5"><Tap on={!urgent} onClick={() => setUrgent(false)}>Normal</Tap><Tap on={urgent} onClick={() => setUrgent(true)}>Urgent</Tap></div></Field>
+          </div>
+          <div className="mt-4">
+            <p className="mb-2 text-xs font-medium text-ink-500">Items in the car</p>
+            <div className="flex flex-wrap gap-2">{BELONGINGS.map((b) => <Tap key={b} on={belongings.includes(b)} onClick={() => setBelongings(toggle(belongings, b))}>{b}</Tap>)}</div>
+          </div>
+          <div className="mt-4">
+            <p className="mb-2 text-xs font-medium text-ink-500">Car photos</p>
+            <div className="grid grid-cols-4 gap-2">
+              {SIDES.map((s, i) => (
+                <button key={s} type="button" aria-label={`Photo of ${s}`} onClick={() => setPhotos(photos.map((p, j) => (j === i ? (p ? '' : SAMPLE[i]) : p)))} className="neu-in-sm relative flex aspect-[4/3] flex-col items-center justify-center gap-1 overflow-hidden text-xs text-ink-500">
+                  {photos[i] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={photos[i]} alt={s} className="absolute inset-0 h-full w-full object-cover" />
+                  ) : <><Camera className="h-5 w-5" />{s}</>}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={clsx('mt-5 rounded-2xl p-4 transition', approved ? 'bg-ok-soft ring-1 ring-ok/40' : 'neu-in-sm')}>
+            <button type="button" role="checkbox" aria-checked={approved} onClick={() => setApproved(!approved)} className="flex w-full items-center gap-3 text-left">
+              <span className={clsx('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', approved ? 'bg-ok text-white' : 'neu-sm text-transparent')}><Check className="h-5 w-5" strokeWidth={3} /></span>
+              <span><span className="block font-bold">Approved by client</span><span className="block text-sm text-ink-500">{insurance ? 'Client agrees to this claim and to the inspection' : work.length ? `Client agrees to inspection and ${work.length} ${work.length === 1 ? 'item' : 'items'}, about ${inr(totals.total)}` : 'Client agrees to the inspection'}</span></span>
+            </button>
+            {approved && <div className="mt-3 grid grid-cols-3 gap-1.5">{(['In person', 'Phone', 'WhatsApp'] as ApprovalMethod[]).map((m) => <Tap key={m} on={method === m} onClick={() => setMethod(m)} className="!px-1">{m}</Tap>)}</div>}
+            {approved && <p className="mt-3 text-xs text-ink-600">Any new work found later goes to the client for approval first.</p>}
+          </div>
+
+          <div className="mt-5 grid grid-cols-[auto_1fr] gap-3">
+            <Button size="lg" variant="neu" onClick={() => router.push('/admin/jobs')}>Cancel</Button>
+            <Button size="lg" onClick={submit}>Check in car</Button>
+          </div>
+        </Part>
+      </div>
     </>
   );
 }

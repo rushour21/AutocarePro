@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import type { Fixture } from '@/lib/types';
 import { signTexture } from './textures';
 
-const BLUE = '#2f55b8';
+const BLUE = '#4f7ea8';
 const DARK = '#2a2f37';
 
 /** small deterministic pseudo-random so shelves look the same on every render */
@@ -33,7 +33,7 @@ export function Lift({ w, raised, raise }: { w: number; raised: boolean; raise?:
           </mesh>
           <mesh position={[0, 3.12, 0]}>
             <boxGeometry args={[0.36, 0.1, 0.48]} />
-            <meshStandardMaterial color="#1f3d8a" metalness={0.4} roughness={0.4} />
+            <meshStandardMaterial color="#3f6f99" metalness={0.4} roughness={0.4} />
           </mesh>
           {/* carriage + arms swing in towards the vehicle */}
           <mesh position={[0, arm, 0]} castShadow>
@@ -56,7 +56,7 @@ export function ToolCabinet({ position }: { position: [number, number, number] }
   return (
     <group position={position}>
       <RoundedBox args={[0.8, 1.15, 0.6]} radius={0.03} smoothness={2} position={[0, 0.575, 0]} castShadow>
-        <meshStandardMaterial color="#c0392b" metalness={0.3} roughness={0.5} />
+        <meshStandardMaterial color="#d84a27" metalness={0.3} roughness={0.5} />
       </RoundedBox>
       {[0.25, 0.5, 0.75, 1.0].map((y) => (
         <mesh key={y} position={[0, y, 0.305]}>
@@ -81,7 +81,7 @@ function DiagCart({ position }: { position: [number, number, number] }) {
       </mesh>
       <mesh position={[0, 1.2, 0.06]} rotation={[-0.25, 0, 0]}>
         <boxGeometry args={[0.55, 0.38, 0.05]} />
-        <meshStandardMaterial color="#11161d" emissive="#2f6bff" emissiveIntensity={0.55} />
+        <meshStandardMaterial color="#11161d" emissive="#5f8fb8" emissiveIntensity={0.55} />
       </mesh>
     </group>
   );
@@ -92,7 +92,7 @@ function TyreMachine({ position, kind }: { position: [number, number, number]; k
     <group position={position}>
       <mesh position={[0, 0.45, 0]} castShadow>
         <boxGeometry args={[0.8, 0.9, 0.8]} />
-        <meshStandardMaterial color={kind === 'balancer' ? '#4a5260' : '#2f55b8'} roughness={0.5} metalness={0.3} />
+        <meshStandardMaterial color={kind === 'balancer' ? '#4a5260' : '#4f7ea8'} roughness={0.5} metalness={0.3} />
       </mesh>
       <mesh position={[0, 1.0, 0]} castShadow>
         <cylinderGeometry args={[0.28, 0.28, 0.2, 18]} />
@@ -107,7 +107,7 @@ function Compressor({ position }: { position: [number, number, number] }) {
     <group position={position}>
       <mesh position={[0, 0.6, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
         <cylinderGeometry args={[0.32, 0.32, 1.0, 20]} />
-        <meshStandardMaterial color="#d9532b" metalness={0.4} roughness={0.45} />
+        <meshStandardMaterial color="#d84a27" metalness={0.4} roughness={0.45} />
       </mesh>
       {[-0.35, 0.35].map((x) => (
         <mesh key={x} position={[x, 0.15, 0]}>
@@ -169,19 +169,19 @@ export function WashBooth({ w, l }: { w: number; l: number }) {
       {[-1.6, 0, 1.6].map((z) => (
         <mesh key={z} position={[0, H - 0.1, Math.max(-l / 2 + 0.5, Math.min(l / 2 - 0.5, z))]}>
           <boxGeometry args={[w - 0.5, 0.06, 0.06]} />
-          <meshStandardMaterial color="#1fb3d6" emissive="#1fb3d6" emissiveIntensity={0.6} />
+          <meshStandardMaterial color="#6fa9b8" emissive="#6fa9b8" emissiveIntensity={0.6} />
         </mesh>
       ))}
       {/* glass sides */}
       {[-1, 1].map((s) => (
         <mesh key={`gx${s}`} position={[s * (w / 2 - 0.1), H / 2, 0]}>
           <boxGeometry args={[0.02, H - 0.2, l - 0.3]} />
-          <meshPhysicalMaterial color="#9be3f5" transparent opacity={0.16} roughness={0.05} metalness={0} />
+          <meshPhysicalMaterial color="#bcd0e2" transparent opacity={0.16} roughness={0.05} metalness={0} />
         </mesh>
       ))}
       <mesh position={[0, H / 2, -(l / 2 - 0.1)]}>
         <boxGeometry args={[w - 0.3, H - 0.2, 0.02]} />
-        <meshPhysicalMaterial color="#9be3f5" transparent opacity={0.16} roughness={0.05} />
+        <meshPhysicalMaterial color="#bcd0e2" transparent opacity={0.16} roughness={0.05} />
       </mesh>
     </group>
   );
@@ -198,7 +198,7 @@ function Plant({ position, s = 1 }: { position: [number, number, number]; s?: nu
       {[0, 1, 2, 3, 4].map((i) => (
         <mesh key={i} position={[Math.sin(i * 1.3) * 0.18, 0.85 + (i % 3) * 0.16, Math.cos(i * 1.3) * 0.18]} castShadow>
           <icosahedronGeometry args={[0.3 - (i % 2) * 0.05, 1]} />
-          <meshStandardMaterial color={i % 2 ? '#3f8f4f' : '#2f7a44'} roughness={0.8} flatShading />
+          <meshStandardMaterial color={i % 2 ? '#3f8f73' : '#2f7a62'} roughness={0.8} flatShading />
         </mesh>
       ))}
     </group>
@@ -209,7 +209,7 @@ export { Plant };
 function PartsStorage({ f }: { f: Fixture }) {
   const rows = Math.max(1, Math.floor(f.h / 1.8));
   const gap = f.h / rows;
-  const boxColors = ['#b89968', '#c9a878', '#a98b5e', '#d4b98a', '#8f7a56'];
+  const boxColors = ['#b4bac4', '#c2c8d1', '#a6adb9', '#cdd2da', '#939ba8'];
   return (
     <group position={[f.x + f.w / 2, 0, f.y + f.h / 2]}>
       {Array.from({ length: rows }).map((_, r) => {
@@ -220,7 +220,7 @@ function PartsStorage({ f }: { f: Fixture }) {
             {[-1, 1].flatMap((sx) => [-1, 1].map((sz) => (
               <mesh key={`${sx}${sz}`} position={[sx * (W / 2 - 0.04), 1.1, sz * 0.3]} castShadow>
                 <boxGeometry args={[0.06, 2.2, 0.06]} />
-                <meshStandardMaterial color="#2f4a86" metalness={0.4} roughness={0.5} />
+                <meshStandardMaterial color="#3f6f99" metalness={0.4} roughness={0.5} />
               </mesh>
             )))}
             {[0.25, 0.8, 1.35, 1.9].map((y, li) => (
@@ -259,7 +259,7 @@ function Reception({ f }: { f: Fixture }) {
       </RoundedBox>
       <mesh position={[0, 1.13, 0]} castShadow>
         <boxGeometry args={[W + 0.1, 0.07, 1.05]} />
-        <meshStandardMaterial color="#f1ede4" roughness={0.35} />
+        <meshStandardMaterial color="#eef0f3" roughness={0.35} />
       </mesh>
       <mesh position={[0, 0.62, 0.456]}>
         <planeGeometry args={[Math.min(W - 0.4, 2.2), 0.55]} />
@@ -269,7 +269,7 @@ function Reception({ f }: { f: Fixture }) {
         <group key={x} position={[x * (W / 4), 1.17, -0.1]}>
           <mesh position={[0, 0.22, 0]} rotation={[-0.15, 0, 0]}>
             <boxGeometry args={[0.55, 0.34, 0.03]} />
-            <meshStandardMaterial color="#10141a" emissive="#4a6fa5" emissiveIntensity={0.35} />
+            <meshStandardMaterial color="#10141a" emissive="#5f8fb8" emissiveIntensity={0.35} />
           </mesh>
           <mesh position={[0, 0.04, 0]}>
             <boxGeometry args={[0.18, 0.06, 0.14]} />
@@ -294,7 +294,7 @@ function Lounge({ f }: { f: Fixture }) {
     <group position={[cx, 0, cz]}>
       <mesh position={[0, 0.015, 0]} receiveShadow>
         <boxGeometry args={[Math.max(1, f.w - 0.6), 0.03, Math.max(1, f.h - 0.6)]} />
-        <meshStandardMaterial color="#8d8479" roughness={0.95} />
+        <meshStandardMaterial color="#8a8d94" roughness={0.95} />
       </mesh>
       <RoundedBox args={[Math.min(2.6, f.w - 1), 0.5, 0.95]} radius={0.12} smoothness={3} position={[0, 0.28, -Math.max(0.4, f.h / 2 - 1.1)]} castShadow>
         <meshStandardMaterial color="#8c8f96" roughness={0.9} />
@@ -304,12 +304,12 @@ function Lounge({ f }: { f: Fixture }) {
       </RoundedBox>
       <mesh position={[0, 0.26, 0.2]} castShadow>
         <boxGeometry args={[1.1, 0.04, 0.7]} />
-        <meshStandardMaterial color="#c9a77a" roughness={0.5} />
+        <meshStandardMaterial color="#b4b7bd" roughness={0.5} />
       </mesh>
       {[[-0.45, 0.2 - 0.28], [0.45, 0.2 - 0.28], [-0.45, 0.2 + 0.28], [0.45, 0.2 + 0.28]].map(([x, z], i) => (
         <mesh key={i} position={[x, 0.13, z]}>
           <boxGeometry args={[0.05, 0.26, 0.05]} />
-          <meshStandardMaterial color="#6b5a45" />
+          <meshStandardMaterial color="#555860" />
         </mesh>
       ))}
       <Plant position={[f.w / 2 - 0.6, 0, -f.h / 2 + 0.6]} s={0.9} />

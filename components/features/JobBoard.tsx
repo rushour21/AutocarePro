@@ -2,120 +2,189 @@
 
 import Link from 'next/link';
 import clsx from 'clsx';
-import { GripVertical, MoreVertical } from 'lucide-react';
-import { useState } from 'react';
+import { MoreHorizontal } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { setJobStage } from '@/lib/actions';
 import { BOARD_COLUMNS, STAGE_LABEL, vehicleName, vehicleOf, userOf, type Tone } from '@/lib/format';
 import type { Db, Job, Stage } from '@/lib/types';
-import { Avatar, EmptyState, ProgressBar, VehicleImage } from '@/components/ui';
+import { Avatar, EmptyState, VehicleImage } from '@/components/ui';
 
-const COL_STYLE: Record<Tone, { chip: string; ring: string; bar: string; dot: string }> = {
-  blue: { chip: 'bg-info-soft text-info-strong', ring: 'border-info', bar: '#2f6bff', dot: 'border-[#7aa0ff]' },
-  red: { chip: 'bg-coral-100 text-coral-600', ring: 'border-coral-500', bar: '#f26a2e', dot: 'border-coral-500' },
-  violet: { chip: 'bg-info-soft text-info-strong', ring: 'border-violet', bar: '#7c8cff', dot: 'border-[#7aa0ff]' },
-  amber: { chip: 'bg-warn-soft text-warn-strong', ring: 'border-warn', bar: '#f5a524', dot: 'border-warn' },
-  green: { chip: 'bg-ok-soft text-ok-strong', ring: 'border-ok', bar: '#1d9d65', dot: 'border-[#7bd1a8]' },
-  gray: { chip: '', ring: '', bar: '#aaa', dot: '' },
-  coral: { chip: '', ring: '', bar: '#f26a2e', dot: '' },
-};
+const COL_DOT: Partial<Record<Tone, string>> = { blue: '#5f8fb8', red: '#d84a27', violet: '#7d86b5', amber: '#c9a24a', green: '#248a6c' };
 
-function BoardCard({ job, db, tone, onMove, adminHref }: { job: Job; db: Db; tone: Tone; onMove: (s: Stage) => void; adminHref: string }) {
+function CardBody({ job, db, color }: { job: Job; db: Db; color: string }) {
   const v = vehicleOf(db, job.vehicleId);
   const tech = userOf(db, job.techId);
-  const [menu, setMenu] = useState(false);
-  const st = COL_STYLE[tone];
   return (
-    <div
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.setData('text/plain', job.id);
-        e.dataTransfer.effectAllowed = 'move';
-      }}
-      className="neu-sm group relative cursor-grab overflow-hidden !rounded-[18px] p-3.5 active:cursor-grabbing"
-    >
-      <div className="flex items-start justify-between">
-        <span className={clsx('mt-0.5 h-3 w-3 rounded-full border-[3px] bg-white', st.dot)} aria-hidden />
-        <div className="flex items-center gap-1 text-ink-300">
-          <GripVertical className="h-4 w-4 opacity-0 transition group-hover:opacity-100" aria-hidden />
-          <button type="button" aria-label={`Move job ${job.id}`} aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} className="rounded-md p-0.5 hover:text-ink">
-            <MoreVertical className="h-4 w-4" />
-          </button>
-        </div>
+    <>
+      <div className="flex items-center gap-1.5 pr-6 text-[11px] font-medium text-ink-400">
+        <span>#{job.id}</span>
+        {job.priority === 'High' && <span className="rounded-full bg-coral-100 px-1.5 py-px text-[10px] text-coral-600">High</span>}
       </div>
-      <Link href={adminHref} className="mt-1 block">
-        {v && <VehicleImage carKey={v.carKey} className="mx-auto h-[58px] w-full" />}
-        <p className="mt-2 truncate text-[13.5px] font-bold">{vehicleName(v)}</p>
-        <p className="truncate text-xs text-ink-400">{v?.reg}</p>
-      </Link>
-      <div className="mt-3 flex items-center justify-between">
-        <Avatar src={tech?.avatar} name={tech?.name} size={26} />
-        <span className="rounded-lg bg-white/70 px-2 py-0.5 text-[11px] font-medium text-ink-500">#{job.id}</span>
+      {v && <VehicleImage carKey={v.carKey} className="mx-auto mt-1 h-[52px] w-full" />}
+      <p className="mt-1.5 truncate text-[14px] font-semibold tracking-tight">{vehicleName(v)}</p>
+      <p className="truncate text-xs text-ink-500">{job.service}</p>
+      <div className="mt-2.5 flex items-center gap-2">
+        <Avatar src={tech?.avatar} name={tech?.name} size={22} className="!ring-0 !shadow-none" />
+        <span className={clsx('min-w-0 flex-1 truncate text-[11px]', job.dueIn < 0 ? 'font-medium text-bad' : 'text-ink-500')}>{job.dueLabel}</span>
+        <span className="text-[11px] font-medium tabular-nums text-ink-500">{job.progress}%</span>
       </div>
-      <ProgressBar value={job.progress} tone="gray" className="!absolute inset-x-3.5 bottom-0 !h-[3px] !rounded-none !bg-transparent !shadow-none" />
-      <span className="absolute bottom-0 left-0 h-[3px]" style={{ width: `${Math.max(12, job.progress)}%`, background: st.bar }} />
-      {menu && (
-        <>
-          <button className="fixed inset-0 z-20 cursor-default" aria-label="Close menu" onClick={() => setMenu(false)} />
-          <div role="menu" className="neu-sm slide-up absolute right-2 top-9 z-30 w-44 p-1.5">
-            <p className="px-2.5 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-400">Move to</p>
-            {BOARD_COLUMNS.map((c) => (
-              <button
-                key={c.stage}
-                role="menuitem"
-                disabled={c.stage === job.stage}
-                onClick={() => {
-                  onMove(c.stage);
-                  setMenu(false);
-                }}
-                className="block w-full rounded-lg px-2.5 py-2 text-left text-sm hover:bg-white/70 disabled:text-ink-300"
-              >
-                {c.label}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
+      <div className="mt-2 h-1 overflow-hidden rounded-full bg-ink-500/10">
+        <div className="h-full rounded-full" style={{ width: `${job.progress}%`, background: color }} />
+      </div>
+    </>
   );
 }
 
 export function JobBoard({ db, jobs, onToast }: { db: Db; jobs: Job[]; onToast: (m: string) => void }) {
   const [over, setOver] = useState<Stage | null>(null);
+  const [menu, setMenu] = useState<string | null>(null);
+  const [drag, setDrag] = useState<{ job: Job; color: string; x: number; y: number; w: number; dx: number; dy: number } | null>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  const dragged = useRef(false);
+  const pressing = useRef(false);
+
   const move = (id: string, stage: Stage) => {
     const j = jobs.find((x) => x.id === id);
     if (!j || j.stage === stage) return;
     setJobStage(id, stage, 'Admin');
     onToast(`#${id} moved to ${STAGE_LABEL[stage]}`);
   };
+
+  const stageAt = (x: number, y: number) => (document.elementFromPoint(x, y)?.closest('[data-stage]') as HTMLElement | null)?.dataset.stage as Stage | undefined;
+
+  // Pointer events rather than HTML drag: works from any point on the card, and on touch (press and hold).
+  const startDrag = (e: React.PointerEvent<HTMLElement>, job: Job, color: string) => {
+    if (e.button !== 0 || (e.target as Element).closest('[data-nodrag]')) return;
+    const box = e.currentTarget.getBoundingClientRect();
+    const start = { x: e.clientX, y: e.clientY };
+    const touch = e.pointerType !== 'mouse';
+    let last = start;
+    let active = false;
+    dragged.current = false;
+    pressing.current = touch;
+
+    const begin = () => {
+      active = true;
+      dragged.current = true;
+      document.body.style.userSelect = 'none';
+      setMenu(null);
+      setDrag({ job, color, x: last.x, y: last.y, w: box.width, dx: start.x - box.left, dy: start.y - box.top });
+      if (touch) navigator.vibrate?.(10);
+    };
+    const timer = touch ? setTimeout(begin, 220) : undefined;
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      pressing.current = false;
+      document.body.style.userSelect = '';
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onCancel);
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('touchmove', block);
+    };
+    const finish = (drop: boolean) => {
+      if (active && drop) {
+        const stage = stageAt(last.x, last.y);
+        if (stage) move(job.id, stage);
+      }
+      setDrag(null);
+      setOver(null);
+      cleanup();
+    };
+    const onMove = (ev: PointerEvent) => {
+      last = { x: ev.clientX, y: ev.clientY };
+      if (!active) {
+        if (Math.hypot(last.x - start.x, last.y - start.y) > 6) {
+          if (touch) cleanup();
+          else begin();
+        }
+        return;
+      }
+      setDrag((d) => d && { ...d, x: last.x, y: last.y });
+      setOver(stageAt(last.x, last.y) ?? null);
+      const s = scroller.current;
+      if (s) {
+        const r = s.getBoundingClientRect();
+        if (last.x < r.left + 44) s.scrollLeft -= 14;
+        else if (last.x > r.right - 44) s.scrollLeft += 14;
+      }
+      if (last.y < 90) window.scrollBy(0, -12);
+      else if (last.y > window.innerHeight - 50) window.scrollBy(0, 12);
+    };
+    const onUp = () => finish(true);
+    const onCancel = () => finish(false);
+    const onKey = (ev: KeyboardEvent) => ev.key === 'Escape' && finish(false);
+    const block = (ev: TouchEvent) => { if (active) ev.preventDefault(); };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onCancel);
+    window.addEventListener('keydown', onKey);
+    document.addEventListener('touchmove', block, { passive: false });
+  };
+
+  if (jobs.length === 0) return <EmptyState title="No jobs match your filters" />;
+
   return (
-    <div className="thin-scroll -mx-1 overflow-x-auto px-1 pb-3">
-      <div className="grid min-w-[980px] grid-cols-5 gap-4">
+    <div ref={scroller} className="thin-scroll -mx-4 snap-x snap-mandatory overflow-x-auto scroll-px-4 px-4 pb-3 lg:mx-0 lg:snap-none lg:overflow-visible lg:px-0">
+      <div className="flex w-max items-start gap-3 lg:grid lg:w-auto lg:grid-cols-6">
         {BOARD_COLUMNS.map((c) => {
           const list = jobs.filter((j) => j.stage === c.stage);
-          const st = COL_STYLE[c.tone];
+          const color = COL_DOT[c.tone] ?? '#92959c';
           return (
             <section
               key={c.stage}
+              data-stage={c.stage}
               aria-label={`${c.label} column`}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setOver(c.stage);
-              }}
-              onDragLeave={() => setOver((o) => (o === c.stage ? null : o))}
-              onDrop={(e) => {
-                e.preventDefault();
-                setOver(null);
-                move(e.dataTransfer.getData('text/plain'), c.stage);
-              }}
-              className={clsx('neu-in-sm min-h-[420px] !rounded-[22px] p-3 transition', over === c.stage && 'ring-2 ring-coral-400/70')}
+              className={clsx('min-h-[420px] w-[78vw] max-w-[280px] shrink-0 snap-start rounded-[22px] p-2 transition-colors sm:w-[260px] lg:w-auto lg:min-w-0 lg:max-w-none', over === c.stage ? 'bg-coral-100/70 shadow-[inset_0_0_0_1.5px_rgba(216,74,39,0.35)]' : 'bg-ink-500/[0.06]')}
             >
-              <h3 className={clsx('mb-3 flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-bold', st.chip)}>
-                <span className={clsx('h-3 w-3 rounded-full border-[3px] bg-white', st.ring)} />
-                {c.label} ({list.length})
+              <h3 className="flex items-center gap-2 px-2 pb-2.5 pt-1.5 text-[13px] font-semibold">
+                <span className="h-2 w-2 rounded-full" style={{ background: color }} />
+                <span className="min-w-0 flex-1 truncate">{c.label}</span>
+                <span className="text-xs font-medium tabular-nums text-ink-400">{list.length}</span>
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {list.map((j) => (
-                  <BoardCard key={j.id} job={j} db={db} tone={c.tone} onMove={(s) => move(j.id, s)} adminHref={`/admin/jobs/${j.id}`} />
+                  <article
+                    key={j.id}
+                    onPointerDown={(e) => startDrag(e, j, color)}
+                    onContextMenu={(e) => pressing.current && e.preventDefault()}
+                    onDragStart={(e) => e.preventDefault()}
+                    className={clsx('relative cursor-grab touch-pan-x touch-pan-y select-none rounded-[18px] bg-[#fbfbfc] shadow-neu-xs transition-[box-shadow,opacity] duration-200 [-webkit-touch-callout:none] hover:shadow-neu-sm active:cursor-grabbing', drag?.job.id === j.id && 'opacity-30', menu === j.id && 'z-30')}
+                  >
+                    <Link
+                      href={`/admin/jobs/${j.id}`}
+                      draggable={false}
+                      onClickCapture={(e) => { if (dragged.current) { e.preventDefault(); e.stopPropagation(); } }}
+                      className="block rounded-[18px] p-3"
+                    >
+                      <CardBody job={j} db={db} color={color} />
+                    </Link>
+                    <button data-nodrag type="button" aria-label={`Move job ${j.id}`} aria-haspopup="menu" aria-expanded={menu === j.id} onClick={() => setMenu(menu === j.id ? null : j.id)} className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full text-ink-400 transition-colors hover:bg-ink-500/10 hover:text-ink">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </button>
+                    {menu === j.id && (
+                      <>
+                        <button data-nodrag className="fixed inset-0 z-20 cursor-default" aria-label="Close menu" onClick={() => setMenu(null)} />
+                        <div data-nodrag role="menu" className="glass menu-in absolute right-1.5 top-9 z-30 w-44 origin-top-right rounded-2xl p-1.5">
+                          <p className="px-2.5 pb-1 pt-1 text-[11px] font-medium text-ink-400">Move to</p>
+                          {BOARD_COLUMNS.map((t) => (
+                            <button
+                              key={t.stage}
+                              role="menuitem"
+                              disabled={t.stage === j.stage}
+                              onClick={() => { move(j.id, t.stage); setMenu(null); }}
+                              className="block w-full rounded-[10px] px-2.5 py-1.5 text-left text-sm enabled:hover:bg-coral-500 enabled:hover:text-white disabled:text-ink-300"
+                            >
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </article>
                 ))}
                 {list.length === 0 && <p className="px-2 py-8 text-center text-xs text-ink-400">Drop a job here</p>}
               </div>
@@ -123,7 +192,13 @@ export function JobBoard({ db, jobs, onToast }: { db: Db; jobs: Job[]; onToast: 
           );
         })}
       </div>
-      {jobs.length === 0 && <EmptyState title="No jobs match your filters" />}
+      {drag &&
+        createPortal(
+          <div className="pointer-events-none fixed left-0 top-0 z-[80] rounded-[18px] bg-[#fbfbfc] p-3 shadow-[0_18px_44px_rgba(60,68,84,0.3)]" style={{ width: drag.w, transform: `translate(${drag.x - drag.dx}px, ${drag.y - drag.dy}px) rotate(1.5deg) scale(1.03)` }}>
+            <CardBody job={drag.job} db={db} color={drag.color} />
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

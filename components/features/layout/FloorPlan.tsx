@@ -209,28 +209,28 @@ export const FloorPlan = forwardRef<FloorPlanHandle, Props>(function FloorPlan(
     return t;
   }, [plan.w, plan.h]);
 
-  const stroke = (id: string, color: string) => (errIds.has(id) ? '#e5482d' : warnIds.has(id) ? '#ee8a12' : color);
+  const stroke = (id: string, color: string) => (errIds.has(id) ? '#d84a27' : warnIds.has(id) ? '#c9a24a' : color);
 
   const renderFixture = (f: Fixture) => {
     const sel = selectedId === f.id;
     if (f.kind === 'entrance') {
       return (
         <g key={f.id} data-fixture={f.id} onPointerDown={(e) => startMove(e, f.id)} className={clsx(edit && 'cursor-move')} role="button" aria-label={f.name} aria-pressed={sel}>
-          <rect x={f.x - 0.15} y={f.y} width={f.w + 0.3} height={f.h} fill="#f4efe7" />
-          <path d={`M ${f.x - 2.1} ${f.y + f.h / 2} h 1.3 m -0.5 -0.5 l 0.5 0.5 l -0.5 0.5`} fill="none" stroke="#1d9d65" strokeWidth={0.18} strokeLinecap="round" strokeLinejoin="round" />
-          <text x={f.x + f.w + 0.35} y={f.y + f.h / 2 + 0.15} fontSize={0.42} fontWeight={600} fill="#3b3c40" textAnchor="start" pointerEvents="none">Entrance</text>
-          {sel && <rect x={f.x - 0.2} y={f.y - 0.1} width={f.w + 0.4} height={f.h + 0.2} fill="none" stroke="#f26a2e" strokeWidth={0.1} strokeDasharray="0.3 0.2" />}
+          <rect x={f.x - 0.15} y={f.y} width={f.w + 0.3} height={f.h} fill="#eef0f3" />
+          <path d={`M ${f.x - 2.1} ${f.y + f.h / 2} h 1.3 m -0.5 -0.5 l 0.5 0.5 l -0.5 0.5`} fill="none" stroke="#248a6c" strokeWidth={0.18} strokeLinecap="round" strokeLinejoin="round" />
+          <text x={f.x + f.w + 0.35} y={f.y + f.h / 2 + 0.15} fontSize={0.42} fontWeight={600} fill="#3a3d44" textAnchor="start" pointerEvents="none">Entrance</text>
+          {sel && <rect x={f.x - 0.2} y={f.y - 0.1} width={f.w + 0.4} height={f.h + 0.2} fill="none" stroke="#d84a27" strokeWidth={0.1} strokeDasharray="0.3 0.2" />}
         </g>
       );
     }
-    const fill = f.kind === 'parts' ? '#e9e1d3' : f.kind === 'reception' ? '#ece6dc' : f.kind === 'lounge' ? '#efe9e0' : '#dcd7cf';
+    const fill = f.kind === 'parts' ? '#e4e6ea' : f.kind === 'reception' ? '#e9ebef' : f.kind === 'lounge' ? '#eceef1' : '#d8dade';
     return (
       <g key={f.id} data-fixture={f.id} onPointerDown={(e) => startMove(e, f.id)} className={clsx(edit && 'cursor-move')} role="button" aria-label={f.name} aria-pressed={sel}>
-        <rect x={f.x} y={f.y} width={f.w} height={f.h} rx={0.2} fill={fill} stroke={stroke(f.id, sel ? '#f26a2e' : '#9a8f80')} strokeWidth={sel ? 0.14 : 0.08} />
-        {f.kind === 'parts' && Array.from({ length: Math.max(1, Math.floor(f.h / 1.1)) }).map((_, i) => <rect key={i} x={f.x + 0.3} y={f.y + 0.3 + i * 1.1} width={Math.max(0.5, f.w - 0.6)} height={0.55} rx={0.08} fill="#b79c6e" opacity={0.7} />)}
-        {f.kind === 'reception' && <rect x={f.x + 0.4} y={f.y + 0.4} width={Math.max(0.5, f.w * 0.55)} height={Math.max(0.4, f.h - 0.8)} rx={0.15} fill="#fff" stroke="#c9bfae" strokeWidth={0.06} />}
-        {f.kind === 'lounge' && (<><rect x={f.x + 0.4} y={f.y + 0.5} width={Math.max(0.5, f.w * 0.5)} height={0.9} rx={0.2} fill="#a8a29a" /><rect x={f.x + f.w - 1.6} y={f.y + f.h - 1.6} width={1.1} height={1.1} rx={0.15} fill="#c9a77a" /></>)}
-        <text x={f.x + f.w / 2} y={f.y + f.h / 2 + 0.16} fontSize={Math.min(0.5, f.w / 5)} fontWeight={600} fill="#3b3c40" textAnchor="middle" pointerEvents="none">{f.name}</text>
+        <rect x={f.x} y={f.y} width={f.w} height={f.h} rx={0.2} fill={fill} stroke={stroke(f.id, sel ? '#d84a27' : '#9497a0')} strokeWidth={sel ? 0.14 : 0.08} />
+        {f.kind === 'parts' && Array.from({ length: Math.max(1, Math.floor(f.h / 1.1)) }).map((_, i) => <rect key={i} x={f.x + 0.3} y={f.y + 0.3 + i * 1.1} width={Math.max(0.5, f.w - 0.6)} height={0.55} rx={0.08} fill="#9a9da5" opacity={0.7} />)}
+        {f.kind === 'reception' && <rect x={f.x + 0.4} y={f.y + 0.4} width={Math.max(0.5, f.w * 0.55)} height={Math.max(0.4, f.h - 0.8)} rx={0.15} fill="#fff" stroke="#c6c9cf" strokeWidth={0.06} />}
+        {f.kind === 'lounge' && (<><rect x={f.x + 0.4} y={f.y + 0.5} width={Math.max(0.5, f.w * 0.5)} height={0.9} rx={0.2} fill="#a6a9b0" /><rect x={f.x + f.w - 1.6} y={f.y + f.h - 1.6} width={1.1} height={1.1} rx={0.15} fill="#b4b7bd" /></>)}
+        <text x={f.x + f.w / 2} y={f.y + f.h / 2 + 0.16} fontSize={Math.min(0.5, f.w / 5)} fontWeight={600} fill="#3a3d44" textAnchor="middle" pointerEvents="none">{f.name}</text>
       </g>
     );
   };
@@ -241,7 +241,7 @@ export const FloorPlan = forwardRef<FloorPlanHandle, Props>(function FloorPlan(
     const sel = selectedId === b.id;
     const occ = occupants?.[b.id];
     const muted = !b.active;
-    const col = muted ? '#9b968e' : t.color;
+    const col = muted ? '#9a9da4' : t.color;
     const dashed = !b.active || b.state !== 'normal';
     const label = `${b.name}: ${occ ? occ.title : 'empty'}, ${t.label}${!b.active ? ', inactive' : b.state !== 'normal' ? `, ${b.state}` : ''}`;
     const rotated = b.rot === 90;
@@ -252,18 +252,18 @@ export const FloorPlan = forwardRef<FloorPlanHandle, Props>(function FloorPlan(
     return (
       <g key={b.id} data-bay={b.id} role="button" tabIndex={0} aria-label={label} aria-pressed={sel} onPointerDown={(e) => startMove(e, b.id)} onPointerEnter={() => setHover(b.id)} onPointerLeave={() => setHover((h) => (h === b.id ? null : h))} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect?.(b.id); } }} className={clsx('outline-none', edit && tool === 'select' ? 'cursor-move' : 'cursor-pointer')}>
         <rect x={r.x} y={r.y} width={r.w} height={r.h} rx={0.2} fill={col} fillOpacity={hover === b.id || sel ? 0.2 : 0.1} stroke={stroke(b.id, col)} strokeWidth={sel ? 0.2 : 0.14} strokeDasharray={dashed ? '0.5 0.3' : undefined} />
-        {lift && (<><rect x={r.x + 0.25} y={r.y + 0.35} width={0.35} height={0.35} rx={0.05} fill="#2f55b8" opacity={muted ? 0.4 : 0.9} /><rect x={r.x + r.w - 0.6} y={r.y + 0.35} width={0.35} height={0.35} rx={0.05} fill="#2f55b8" opacity={muted ? 0.4 : 0.9} /></>)}
+        {lift && (<><rect x={r.x + 0.25} y={r.y + 0.35} width={0.35} height={0.35} rx={0.05} fill="#3f6f99" opacity={muted ? 0.4 : 0.9} /><rect x={r.x + r.w - 0.6} y={r.y + 0.35} width={0.35} height={0.35} rx={0.05} fill="#3f6f99" opacity={muted ? 0.4 : 0.9} /></>)}
         {occ && (
           <g transform={`translate(${cxm} ${cym}) rotate(${rotated ? -90 : 0}) scale(${carScale}) translate(-50 -125)`} opacity={muted ? 0.5 : 1} pointerEvents="none">
             <CarTopShapes color={CAR_COLOR[occ.carKey]} idPrefix={`${uid}${b.id.replace(/[^a-z0-9]/gi, '')}`} />
           </g>
         )}
         {/* label block */}
-        <text x={r.x + r.w / 2} y={r.y + 0.95} fontSize={0.62} fontWeight={700} fill="#26272b" textAnchor="middle" pointerEvents="none" stroke="#fffaf4" strokeWidth={0.16} paintOrder="stroke">{b.name}</text>
-        <text x={r.x + r.w / 2} y={r.y + 1.55} fontSize={0.4} fill="#55565a" textAnchor="middle" pointerEvents="none" stroke="#fffaf4" strokeWidth={0.14} paintOrder="stroke">{occ ? occ.title : t.label}</text>
-        {(edit || !occ) && <text x={r.x + r.w / 2} y={r.y + r.h - 0.35} fontSize={0.36} fill="#77746f" textAnchor="middle" pointerEvents="none" stroke="#fffaf4" strokeWidth={0.12} paintOrder="stroke">{b.w} m × {b.l} m</text>}
-        {b.state !== 'normal' && b.active && <text x={r.x + r.w / 2} y={r.y + r.h / 2 + 0.15} fontSize={0.5} fontWeight={700} fill={b.state === 'maintenance' ? '#c43520' : '#6a4fd6'} textAnchor="middle" pointerEvents="none" stroke="#fffaf4" strokeWidth={0.14} paintOrder="stroke">{b.state === 'maintenance' ? 'Maintenance' : 'Reserved'}</text>}
-        {!b.active && <text x={r.x + r.w / 2} y={r.y + r.h / 2 + 0.15} fontSize={0.5} fontWeight={700} fill="#77746f" textAnchor="middle" pointerEvents="none" stroke="#fffaf4" strokeWidth={0.14} paintOrder="stroke">Inactive</text>}
+        <text x={r.x + r.w / 2} y={r.y + 0.95} fontSize={0.62} fontWeight={700} fill="#25262b" textAnchor="middle" pointerEvents="none" stroke="#fcfcfd" strokeWidth={0.16} paintOrder="stroke">{b.name}</text>
+        <text x={r.x + r.w / 2} y={r.y + 1.55} fontSize={0.4} fill="#555860" textAnchor="middle" pointerEvents="none" stroke="#fcfcfd" strokeWidth={0.14} paintOrder="stroke">{occ ? occ.title : t.label}</text>
+        {(edit || !occ) && <text x={r.x + r.w / 2} y={r.y + r.h - 0.35} fontSize={0.36} fill="#6f737b" textAnchor="middle" pointerEvents="none" stroke="#fcfcfd" strokeWidth={0.12} paintOrder="stroke">{b.w} m × {b.l} m</text>}
+        {b.state !== 'normal' && b.active && <text x={r.x + r.w / 2} y={r.y + r.h / 2 + 0.15} fontSize={0.5} fontWeight={700} fill={b.state === 'maintenance' ? '#b93a1c' : '#6a73a6'} textAnchor="middle" pointerEvents="none" stroke="#fcfcfd" strokeWidth={0.14} paintOrder="stroke">{b.state === 'maintenance' ? 'Maintenance' : 'Reserved'}</text>}
+        {!b.active && <text x={r.x + r.w / 2} y={r.y + r.h / 2 + 0.15} fontSize={0.5} fontWeight={700} fill="#6f737b" textAnchor="middle" pointerEvents="none" stroke="#fcfcfd" strokeWidth={0.14} paintOrder="stroke">Inactive</text>}
         {b.equipment.length > 0 && edit && <title>{b.equipment.map(equipmentLabel).join(', ')}</title>}
       </g>
     );
@@ -278,7 +278,7 @@ export const FloorPlan = forwardRef<FloorPlanHandle, Props>(function FloorPlan(
       role="application"
       aria-label={ariaLabel}
       tabIndex={edit ? 0 : -1}
-      className={clsx('w-full touch-none select-none rounded-2xl bg-[#f4efe7] outline-none', tool === 'pan' || view.z > 1 ? 'cursor-grab' : '', className)}
+      className={clsx('w-full touch-none select-none rounded-2xl bg-[#eef0f3] outline-none', tool === 'pan' || view.z > 1 ? 'cursor-grab' : '', className)}
       style={{ aspectRatio: `${base.w} / ${base.h}` }}
       onPointerDown={onBgDown}
       onPointerMove={onMove}
@@ -288,32 +288,32 @@ export const FloorPlan = forwardRef<FloorPlanHandle, Props>(function FloorPlan(
       onKeyDown={onKey}
     >
       <defs>
-        <pattern id={`${uid}-g1`} width={plan.grid} height={plan.grid} patternUnits="userSpaceOnUse"><path d={`M ${plan.grid} 0 H 0 V ${plan.grid}`} fill="none" stroke="#d9d1c3" strokeWidth={0.02} /></pattern>
-        <pattern id={`${uid}-g5`} width={5} height={5} patternUnits="userSpaceOnUse"><path d="M 5 0 H 0 V 5" fill="none" stroke="#c4baa8" strokeWidth={0.04} /></pattern>
+        <pattern id={`${uid}-g1`} width={plan.grid} height={plan.grid} patternUnits="userSpaceOnUse"><path d={`M ${plan.grid} 0 H 0 V ${plan.grid}`} fill="none" stroke="#d5d7dc" strokeWidth={0.02} /></pattern>
+        <pattern id={`${uid}-g5`} width={5} height={5} patternUnits="userSpaceOnUse"><path d="M 5 0 H 0 V 5" fill="none" stroke="#c2c5cb" strokeWidth={0.04} /></pattern>
       </defs>
-      <rect x={base.x} y={base.y} width={base.w} height={base.h} fill="#f4efe7" />
+      <rect x={base.x} y={base.y} width={base.w} height={base.h} fill="#eef0f3" />
       {/* floor */}
-      <rect x={0} y={0} width={plan.w} height={plan.h} fill="#ebe4d8" />
+      <rect x={0} y={0} width={plan.w} height={plan.h} fill="#e6e8ec" />
       <rect x={0} y={0} width={plan.w} height={plan.h} fill={`url(#${uid}-g1)`} />
       <rect x={0} y={0} width={plan.w} height={plan.h} fill={`url(#${uid}-g5)`} />
       {/* rulers */}
-      <g fontSize={0.5} fill="#55565a" pointerEvents="none">
-        {ticks.x.map((v) => (<g key={`x${v}`}><line x1={v} y1={-0.45} x2={v} y2={-0.1} stroke="#77746f" strokeWidth={0.05} /><text x={v} y={-0.7} textAnchor="middle">{v}</text></g>))}
-        {ticks.y.map((v) => (<g key={`y${v}`}><line x1={-0.45} y1={v} x2={-0.1} y2={v} stroke="#77746f" strokeWidth={0.05} /><text x={-0.7} y={v + 0.18} textAnchor="end">{v}</text></g>))}
-        <text x={plan.w + 0.2} y={-0.7} fontSize={0.42} fill="#928e87">m</text>
+      <g fontSize={0.5} fill="#555860" pointerEvents="none">
+        {ticks.x.map((v) => (<g key={`x${v}`}><line x1={v} y1={-0.45} x2={v} y2={-0.1} stroke="#6f737b" strokeWidth={0.05} /><text x={v} y={-0.7} textAnchor="middle">{v}</text></g>))}
+        {ticks.y.map((v) => (<g key={`y${v}`}><line x1={-0.45} y1={v} x2={-0.1} y2={v} stroke="#6f737b" strokeWidth={0.05} /><text x={-0.7} y={v + 0.18} textAnchor="end">{v}</text></g>))}
+        <text x={plan.w + 0.2} y={-0.7} fontSize={0.42} fill="#92959c">m</text>
       </g>
       {layout.fixtures.map(renderFixture)}
       {layout.bays.map(renderBay)}
       {/* walls (drawn after the fixtures so the entrance gap can sit on top) */}
-      <rect x={-wallT / 2} y={-wallT / 2} width={plan.w + wallT} height={plan.h + wallT} fill="none" stroke="#3a4a6b" strokeWidth={wallT} pointerEvents="none" />
-      {layout.fixtures.filter((f) => f.kind === 'entrance').map((f) => <rect key={`gap${f.id}`} x={f.x - 0.25} y={f.y} width={f.w + 0.5} height={f.h} fill="#f4efe7" pointerEvents="none" />)}
+      <rect x={-wallT / 2} y={-wallT / 2} width={plan.w + wallT} height={plan.h + wallT} fill="none" stroke="#3c4150" strokeWidth={wallT} pointerEvents="none" />
+      {layout.fixtures.filter((f) => f.kind === 'entrance').map((f) => <rect key={`gap${f.id}`} x={f.x - 0.25} y={f.y} width={f.w + 0.5} height={f.h} fill="#eef0f3" pointerEvents="none" />)}
       {edit && sel && selectedId && (
         <g>
-          <rect x={sel.x} y={sel.y} width={sel.w} height={sel.h} fill="none" stroke="#f26a2e" strokeWidth={0.12} strokeDasharray="0.4 0.25" pointerEvents="none" />
+          <rect x={sel.x} y={sel.y} width={sel.w} height={sel.h} fill="none" stroke="#d84a27" strokeWidth={0.12} strokeDasharray="0.4 0.25" pointerEvents="none" />
           {tool === 'select' && HANDLES.map(({ h, fx, fy, cursor }) => (
             <g key={h} onPointerDown={(e) => startResize(e, selectedId, h)} style={{ cursor }}>
               <circle cx={sel.x + sel.w * fx} cy={sel.y + sel.h * fy} r={0.6} fill="transparent" />
-              <rect x={sel.x + sel.w * fx - 0.17} y={sel.y + sel.h * fy - 0.17} width={0.34} height={0.34} rx={0.06} fill="#fff" stroke="#f26a2e" strokeWidth={0.1} />
+              <rect x={sel.x + sel.w * fx - 0.17} y={sel.y + sel.h * fy - 0.17} width={0.34} height={0.34} rx={0.06} fill="#fff" stroke="#d84a27" strokeWidth={0.1} />
             </g>
           ))}
         </g>

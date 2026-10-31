@@ -7,6 +7,8 @@ import { ClaimStatusBadge } from '@/components/features/insurance/ClaimParts';
 import { Button, Card, Field, Input, StatusBadge, Textarea } from '@/components/ui';
 import { surveyorSubmit } from '@/lib/actions';
 import { customerOf, inr, vehicleName, vehicleOf } from '@/lib/format';
+import { BeforeAfter } from '@/components/features/BeforeAfter';
+import { RepairBrief } from '@/components/features/insurance/RepairDetails';
 import { fmtAt, fmtDate, splitOf } from '@/lib/insurance';
 import { useDb } from '@/lib/store';
 
@@ -31,7 +33,7 @@ export default function SurveyorClaimPage() {
 
   return (
     <div className="min-h-screen bg-ivory-100 pb-16">
-      <header className="border-b border-ivory-300/70 bg-white/70 backdrop-blur">
+      <header className="glass sticky top-0 z-30">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3.5">
           <span className="text-lg font-bold tracking-tight">AutoHub</span>
           <StatusBadge tone="blue" size="sm">Surveyor view · read-only</StatusBadge>
@@ -52,6 +54,14 @@ export default function SurveyorClaimPage() {
             <div><dt className="text-xs text-ink-400">Accident date</dt><dd className="font-semibold">{fmtDate(claim.accidentDate)}</dd></div>
           </dl>
         </Card>
+
+        {job && (
+          <Card className="p-4 text-sm sm:p-5">
+            <h2 className="mb-3 text-[17px] font-bold tracking-tight">Repair details</h2>
+            <RepairBrief job={job} />
+          </Card>
+        )}
+        {job && <Card className="p-4 sm:p-5"><h2 className="mb-3 text-[17px] font-bold tracking-tight">Before and after</h2><BeforeAfter job={job} /></Card>}
 
         <Card className="p-4 sm:p-5">
           <h2 className="mb-3 text-[17px] font-bold tracking-tight">Photos ({photos.length})</h2>

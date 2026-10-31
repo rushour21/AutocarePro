@@ -1,4 +1,4 @@
-import { estimateOfJob, STEP_INDEX, estimateTotals } from './format';
+import { estimateOfJob, itemApproval, phaseOf, quotedItems, STEP_INDEX, estimateTotals } from './format';
 import type { Db, Estimate, Job, Stage } from './types';
 
 /**
@@ -42,7 +42,6 @@ export interface TrackInfo {
   readyAt?: string;
   complaint: string;
   updatedAgo: string;
-  liveAt: string;
   completedOn: string;
   nextService: string;
   gallery: GalleryItem[];
@@ -50,23 +49,24 @@ export interface TrackInfo {
 
 export function trackInfo(db: Db, job: Job): TrackInfo {
   const date = datePart(job.startedLabel);
-  const brake = job.serviceCategory === 'brake';
+  // sample content belongs to the seeded brake jobs only
+  const brake = job.serviceCategory === 'brake' && !job.checkin;
+  const told = job.checkin ? [...job.checkin.issues, job.checkin.complaint].filter(Boolean).join('. ') : '';
   const photos = [...new Set([...job.photos, ...job.points.flatMap((p) => p.photos)])];
   const gallery = brake
     ? BRAKE_GALLERY.filter((g) => STEP_INDEX[job.stage] >= (g.minStep ?? 0))
     : photos.map((src, i) => ({ src, title: `Photo ${i + 1}`, at: job.startedLabel, groups: ['Inspection'] as GalleryGroup[] }));
   void db;
   return {
-    bookedAt: `${date}, 9:30 AM`,
+    bookedAt: job.checkin ? job.startedLabel : `${date}, 9:30 AM`,
     receivedAt: job.startedLabel,
-    inspectedAt: `${date}, 11:00 AM`,
-    estimateSentAt: `${date}, 11:30 AM`,
+    inspectedAt: job.checkin ? withYear(job.timeline.inspection) ?? '' : `${date}, 11:00 AM`,
+    estimateSentAt: job.checkin ? '' : `${date}, 11:30 AM`,
     repairAt: withYear(job.timeline.repair),
     qcAt: withYear(job.timeline.quality),
     readyAt: job.completedOn ? `${job.completedOn}, 4:30 PM` : undefined,
-    complaint: brake ? 'Customer reported brake noise while applying brakes at low speed.' : `Customer requested ${job.service.toLowerCase()}.`,
+    complaint: told || (brake ? 'Customer reported brake noise while applying brakes at low speed.' : `Customer requested ${job.service.toLowerCase()}.`),
     updatedAgo: job.stage === 'delivered' ? 'Completed' : 'Updated 2 hours ago',
-    liveAt: '16 Mar 2025, 11:45 AM',
     completedOn: job.completedOn ? `${job.completedOn}, 4:30 PM` : `${job.estCompletionDate.split(',')[0]}, 4:30 PM`,
     nextService: 'In 8,000 km or 6 months',
     gallery,
@@ -88,7 +88,29 @@ const bulletFor = (title: string, status: string) => {
   return status === 'In Progress' ? `${base.replace(/ (replaced|done)$/, '')} — in progress` : base;
 };
 
+const APPROVAL_TEXT = { Approved: 'approved', Declined: 'declined', Pending: 'waiting for your approval' };
+
+function checkInTimeline(db: Db, job: Job): TimelineEntry[] {
+  const info = trackInfo(db, job);
+  const step = STEP_INDEX[job.stage];
+  const est = estimateOfJob(db, job.id);
+  const extras = est?.status === 'Draft' ? [] : est?.items.filter((i) => i.extra) ?? [];
+  const waiting = !!est && est.status === 'Awaiting Approval' && !job.isInsurance;
+  const worked = job.tasks.filter((t) => t.status !== 'Pending' && phaseOf(t) === 'repair').map((t) => bulletFor(t.title, t.status)).slice(0, 5);
+  const approved = !!job.clientApproval || !!job.timeline.approval;
+  return [
+    { label: 'Vehicle Received', at: job.startedLabel, state: 'done', bullets: job.checkin?.issues.length ? job.checkin.issues : undefined },
+    { label: 'Initial Approval', at: job.clientApproval ? `${job.clientApproval.at} · ${job.clientApproval.method}` : undefined, state: approved ? 'done' : 'current', badge: approved ? { text: 'Approved', tone: 'green' } : { text: 'Pending', tone: 'amber' } },
+    { label: 'Inspection', at: info.inspectedAt, state: step >= 1 ? 'done' : step === 0 ? 'current' : 'pending', badge: step >= 1 ? { text: 'View Report', tone: 'link' } : undefined },
+    ...(extras.length ? [{ label: 'Additional Work', state: waiting ? ('current' as const) : ('done' as const), badge: waiting ? { text: 'Needs Approval', tone: 'amber' as const } : undefined, bullets: extras.map((i) => `${i.name}: ${APPROVAL_TEXT[itemApproval(est!, i)]}`) }] : []),
+    { label: 'In Repair', at: info.repairAt, state: step === 2 ? 'current' : step > 2 ? 'done' : 'pending', bullets: step >= 2 ? worked : undefined },
+    { label: 'Quality Check', at: info.qcAt, state: step === 3 ? 'current' : step > 3 ? 'done' : 'pending' },
+    { label: 'Ready for Delivery', state: step >= 4 ? 'done' : 'pending' },
+  ];
+}
+
 export function buildTimeline(db: Db, job: Job): TimelineEntry[] {
+  if (job.checkin) return checkInTimeline(db, job);
   const info = trackInfo(db, job);
   const step = STEP_INDEX[job.stage];
   const est = estimateOfJob(db, job.id);
@@ -116,7 +138,7 @@ export interface Finding {
 
 /** Findings as recorded at the inspection (a snapshot: repairs are shown in the timeline, not here). */
 export function findingsFor(job: Job): Finding[] {
-  if (job.serviceCategory === 'brake') {
+  if (job.serviceCategory === 'brake' && !job.checkin) {
     return [
       { label: 'Front Brake Pads', state: 'bad', lines: [{ text: 'Worn' }, { text: 'Needs Replacement', chip: true }] },
       { label: 'Front Brake Disc', state: 'bad', lines: [{ text: 'Worn' }, { text: 'Needs Replacement', chip: true }] },
@@ -129,6 +151,7 @@ export function findingsFor(job: Job): Finding[] {
   const issues: Finding[] = job.points
     .filter((p) => p.status === 'major' || p.status === 'minor')
     .map((p) => ({ label: p.label, state: p.status === 'major' ? ('bad' as const) : ('warn' as const), lines: [{ text: p.damage }, { text: p.status === 'major' ? 'Needs Attention' : 'Minor Issue', chip: true }] }));
+  if (job.checkin) return issues;
   return [
     ...issues.slice(0, 4),
     { label: 'Suspension', state: 'good', lines: [{ text: 'No Issues' }] },
@@ -144,16 +167,17 @@ export interface Line {
   price: number;
   amount: number;
 }
-export const estimateLines = (e: Estimate): Line[] => e.items.map((i) => ({ name: i.name.replace(' (Front)', ''), type: i.type === 'Labour' ? 'Labour' : 'Parts', qty: i.qty ?? 1, price: Math.round(i.amount / (i.qty ?? 1)), amount: i.amount }));
+export const estimateLines = (e: Estimate): Line[] => quotedItems(e).map((i) => ({ name: i.name.replace(' (Front)', ''), type: i.type === 'Labour' ? 'Labour' : 'Parts', qty: i.qty ?? 1, price: Math.round(i.amount / (i.qty ?? 1)), amount: i.amount }));
 
 export function invoiceBreakdown(db: Db, jobId: string, total: number) {
   const est = estimateOfJob(db, jobId);
   if (est) {
-    const t = estimateTotals(est.items);
-    const parts = est.items.filter((i) => i.category === 'Parts' && !/consumable/i.test(i.name)).reduce((s, i) => s + i.amount, 0);
-    const labour = est.items.filter((i) => i.category === 'Labour').reduce((s, i) => s + i.amount, 0);
-    const cons = est.items.filter((i) => /consumable/i.test(i.name)).reduce((s, i) => s + i.amount, 0);
-    const partNames = est.items.filter((i) => i.category === 'Parts' && !/consumable/i.test(i.name)).map((i) => i.name.replace(/ \(.*\)/, '').replace('Brake ', '')).join(', ');
+    const items = quotedItems(est);
+    const t = estimateTotals(items);
+    const parts = items.filter((i) => i.category === 'Parts' && !/consumable/i.test(i.name)).reduce((s, i) => s + i.amount, 0);
+    const labour = items.filter((i) => i.category === 'Labour').reduce((s, i) => s + i.amount, 0);
+    const cons = items.filter((i) => /consumable/i.test(i.name)).reduce((s, i) => s + i.amount, 0);
+    const partNames = items.filter((i) => i.category === 'Parts' && !/consumable/i.test(i.name)).map((i) => i.name.replace(/ \(.*\)/, '').replace('Brake ', '')).join(', ');
     return { rows: [{ d: `Parts (${partNames})`, a: parts }, { d: 'Labour', a: labour }, ...(cons ? [{ d: 'Consumables', a: cons }] : [])], subtotal: t.subtotal, gst: t.gst, total: t.total };
   }
   const subtotal = Math.round(total / 1.18);

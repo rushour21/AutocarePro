@@ -52,10 +52,15 @@ export interface Vehicle {
 
 export type TaskStatus = 'Completed' | 'In Progress' | 'Pending';
 
+export type TaskPhase = 'inspection' | 'repair' | 'quality';
+
 export interface Task {
   id: string;
   title: string;
   status: TaskStatus;
+  /** which part of the job it belongs to; jobs from before check-in have none */
+  phase?: TaskPhase;
+  photos?: string[];
 }
 
 export interface ChecklistItem {
@@ -142,6 +147,39 @@ export interface Job {
   /** marked as an insurance job; the claim itself lives in Db.claims */
   isInsurance?: boolean;
   claimId?: string;
+  /** recorded at the front desk; jobs created before the check-in flow do not have it */
+  checkin?: CheckIn;
+  /** the initial go-ahead from the client, ticked at check-in or later */
+  clientApproval?: ClientApproval;
+  holdReason?: string;
+  /** the initial go-ahead was requested from the client and is awaited */
+  approvalAsked?: boolean;
+  beforePhotos?: string[];
+  afterPhotos?: string[];
+}
+
+export type VisitReason = 'service' | 'repair' | 'accident' | 'breakdown' | 'estimate' | 'repeat';
+export type BroughtBy = 'Owner' | 'Driver' | 'Towed in';
+export type ApprovalMethod = 'In person' | 'Phone' | 'WhatsApp' | 'Tracking link' | 'Insurer';
+
+export interface CheckIn {
+  reasons: VisitReason[];
+  /** predefined issues the customer reported */
+  issues: string[];
+  complaint: string;
+  odometer: number;
+  fuel: string;
+  broughtBy: BroughtBy;
+  belongings: string[];
+  photos: string[];
+  /** job id of the earlier visit, for a repeat problem */
+  repeatOf?: string;
+}
+
+export interface ClientApproval {
+  method: ApprovalMethod;
+  by: string;
+  at: string;
 }
 
 export type EstimateStatus = 'Awaiting Approval' | 'Approved' | 'Rejected' | 'Draft';
@@ -154,7 +192,19 @@ export interface EstimateItem {
   amount: number;
   /** quantity; unit price is amount / qty (defaults to 1) */
   qty?: number;
+  /** set per line; older lines follow the estimate status */
+  approval?: ItemApproval;
+  /** how the decision was made, e.g. "Phone · 16 Mar 2:30 PM" */
+  decidedVia?: string;
+  /** added but not sent yet: the client cannot see it */
+  draft?: boolean;
+  /** added after check-in by the technician */
+  extra?: boolean;
+  reason?: string;
+  photo?: string;
 }
+
+export type ItemApproval = 'Pending' | 'Approved' | 'Declined';
 
 export interface Estimate {
   id: string;

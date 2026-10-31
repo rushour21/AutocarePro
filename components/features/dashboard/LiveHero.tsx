@@ -6,9 +6,8 @@ import clsx from 'clsx';
 import { ArrowRight, BarChart3, CalendarDays, CheckCircle2, ChevronDown, CircleDollarSign, Clock3, ClipboardList, Hand, Maximize2, Minimize2, Minus, Package, Plus, RotateCcw, Settings, Sun, UserPlus, Wrench } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { TopBar } from '@/components/layout/AppShell';
-import { Avatar, ProgressBar, StatusBadge, VehicleImage, useToast } from '@/components/ui';
+import { Avatar, Greeting, ProgressBar, StatusBadge, VehicleImage, useToast } from '@/components/ui';
 import { setJobStage } from '@/lib/actions';
-import { useSession } from '@/lib/auth';
 import { STAGE_LABEL, STAGE_TONE, estimateTotals, inr, isActive, userOf, vehicleName, vehicleOf } from '@/lib/format';
 import { BAY_STATUS_LABEL, bayType, occupantOf } from '@/lib/layout';
 import type { BayStatus } from '@/lib/layout';
@@ -36,12 +35,12 @@ function useMedia(q: string) {
   return d;
 }
 
-const glass = 'rounded-2xl bg-white/85 shadow-[0_10px_30px_rgba(60,75,100,0.16),inset_0_1px_0_rgba(255,255,255,0.9)] ring-1 ring-white/70 backdrop-blur-md';
+const float = 'glass rounded-2xl';
+const GREETING_NAME = 'Niahal';
 
-/** The admin dashboard: the workshop fills the page and everything else floats on top of it. */
+/** The admin dashboard: the workshop is the hero, with its controls floating on the scene. */
 export function LiveHero() {
   const db = useDb();
-  const { user } = useSession();
   const router = useRouter();
   const toast = useToast();
   const desktop = useMedia('(min-width: 1024px)');
@@ -98,17 +97,17 @@ export function LiveHero() {
     <button
       key={s}
       onClick={() => { const b = layout.bays.find((x) => live.status[x.id] === s); if (b) setSelectedId(b.id); else toast.show(`No bays are ${label.toLowerCase()} right now.`); }}
-      className="flex flex-1 items-center gap-1.5 whitespace-nowrap rounded-xl px-2 py-2 text-left transition hover:-translate-y-0.5"
+      className="flex min-w-0 flex-col rounded-xl px-2 py-2 text-left transition active:scale-[0.97]"
       style={{ background: `${STATUS_COLOR[s]}14` }}
     >
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white" style={{ background: STATUS_COLOR[s] }}>{n}</span>
-      <span className="text-[11.5px] font-semibold" style={{ color: STATUS_COLOR[s] }}>{label}</span>
+      <span className="text-[22px] font-semibold leading-none tracking-tight" style={{ color: STATUS_COLOR[s] }}>{n}</span>
+      <span className="mt-1 truncate text-[11px] font-medium text-ink-600">{label}</span>
     </button>
   );
   const jobTile = (label: string, n: number, color: string) => (
-    <div key={label} className="flex flex-1 items-center gap-1.5 whitespace-nowrap px-0.5">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white" style={{ background: color }}>{n}</span>
-      <span className="text-[11.5px] font-medium text-ink-600">{label}</span>
+    <div key={label} className="flex min-w-0 flex-col rounded-xl bg-ink-500/[0.06] px-2 py-2">
+      <span className="text-[22px] font-semibold leading-none tracking-tight" style={{ color }}>{n}</span>
+      <span className="mt-1 truncate text-[11px] font-medium text-ink-600">{label}</span>
     </div>
   );
   const quick: { icon: React.ElementType; label: string; href?: string; on?: () => void }[] = [
@@ -118,90 +117,86 @@ export function LiveHero() {
     { icon: BarChart3, label: 'View Reports', href: '/admin/reports' },
   ];
 
-  const ctl = 'flex h-11 w-11 items-center justify-center rounded-xl text-ink-600 transition hover:bg-white';
+  const ctl = 'flex h-10 w-10 items-center justify-center rounded-xl text-ink-600 transition-colors hover:bg-ink-500/[0.08]';
 
   return (
-    <div ref={wrap} className={clsx('relative lg:-m-5 lg:h-[calc(100vh-2rem)] lg:min-h-[700px] lg:overflow-hidden lg:rounded-[26px]', full && '!m-0 !h-screen !rounded-none')}>
-      {/* ---------- top: search, greeting, KPIs ---------- */}
-      <div className="relative z-20 pb-3 lg:pointer-events-none lg:absolute lg:inset-x-0 lg:top-0 lg:p-5 lg:pb-0">
-        <div className="lg:pointer-events-auto">
-          <TopBar
-            showUser
-            className="!mb-3"
-            search={{ value: q, onChange: setQ, placeholder: 'Search by customer, vehicle, job number...', onSubmit: () => router.push(`/admin/jobs?q=${encodeURIComponent(q)}`) }}
-            right={
-              <>
-                <span className="neu-sm flex items-center gap-2 px-3.5 py-2 text-xs text-ink-600"><CalendarDays className="h-4 w-4 text-ink-500" /> {db.today}</span>
-                {/* decorative demo reading: there is no weather integration */}
-                <span title="Demo value" className="neu-sm flex items-center gap-2 px-3.5 py-2 text-xs font-semibold"><Sun className="h-4 w-4 text-warn" /> 28°C</span>
-              </>
-            }
-          />
+    <div>
+      <TopBar
+        search={{ value: q, onChange: setQ, placeholder: 'Search by customer, vehicle, job number...', onSubmit: () => router.push(`/admin/jobs?q=${encodeURIComponent(q)}`) }}
+        right={
+          <>
+            <span className="flex items-center gap-1.5 px-2 text-xs text-ink-600"><CalendarDays className="h-4 w-4 text-ink-400" /> {db.today}</span>
+            {/* decorative demo reading: there is no weather integration */}
+            <span title="Demo value" className="flex items-center gap-1.5 px-2 text-xs font-medium text-ink-600"><Sun className="h-4 w-4 text-warn" /> 28°C</span>
+          </>
+        }
+      />
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-3 px-1">
+        <div>
+          <h1 className="text-[28px] font-bold leading-tight tracking-tight"><Greeting name={GREETING_NAME} /></h1>
+          <p className="mt-0.5 text-[13px] text-ink-500">Here&apos;s your workshop. Everything in one view.</p>
         </div>
-        <div className="mb-3 flex flex-wrap items-end justify-between gap-3 lg:pointer-events-none">
-          <div className="lg:pointer-events-auto">
-            <h1 className="text-[26px] font-bold leading-tight tracking-tight">Good morning, {user?.name.split(' ')[0]} <span className="inline-block">👋</span></h1>
-            <p className="mt-0.5 text-[13px] text-ink-500">Here&apos;s your workshop. Everything in one view.</p>
-          </div>
-          <div className="flex items-center gap-2.5 lg:pointer-events-auto">
-            <Link href="/admin/settings/workshop" className="btn btn-neu h-10 px-4 text-sm"><Settings className="h-4 w-4" /> View Settings</Link>
-            <Link href="/admin/jobs/new" className="btn btn-coral h-10 px-5 text-sm"><Plus className="h-4 w-4" /> New Job</Link>
-          </div>
+        <div className="flex items-center gap-2">
+          <Link href="/admin/settings/workshop" className="btn btn-neu h-10 px-4 text-sm"><Settings className="h-4 w-4" /> View Settings</Link>
+          <Link href="/admin/jobs/new" className="btn btn-coral h-10 px-5 text-sm"><Plus className="h-4 w-4" /> New Job</Link>
         </div>
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:pointer-events-auto lg:w-[calc(100%-372px)]" aria-label="Summary">
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
+      {/* ---------- hero: the workshop with its KPIs and controls floating on it ---------- */}
+      <div ref={wrap} className={clsx('relative lg:h-[calc(100vh-272px)] lg:min-h-[470px]', full && '!h-screen')}>
+        <section className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:absolute lg:left-[74px] lg:right-3 lg:top-3 lg:z-20 lg:mb-0" aria-label="Summary">
           {stats.map(({ icon: Icon, tone, label, value, sub, trend, href }) => (
-            <Link key={label} href={href} className={clsx(glass, 'flex items-center gap-3 px-3.5 py-3 transition hover:-translate-y-0.5')}>
-              <span className={clsx('flex h-11 w-11 shrink-0 items-center justify-center rounded-full ring-4 ring-white/70', tone)}><Icon className="h-5 w-5" /></span>
+            <Link key={label} href={href} className={clsx(float, 'flex items-center gap-2.5 px-3 py-2.5 transition-transform active:scale-[0.98]')}>
+              <span className={clsx('flex h-8 w-8 shrink-0 items-center justify-center rounded-full lg:max-xl:hidden', tone)}><Icon className="h-4 w-4" /></span>
               <span className="min-w-0 flex-1 leading-tight">
-                <span className="flex items-baseline gap-2">
-                  <span className="text-[26px] font-bold tracking-tight">{value}</span>
-                  {trend && <span title="Demo value" className={clsx('text-[11px] font-semibold', trend.up ? 'text-ok' : 'text-bad')}>{trend.up ? '↑' : '↓'} {trend.n}</span>}
+                <span className="flex items-baseline gap-1.5">
+                  <span className="text-[20px] font-semibold tracking-tight">{value}</span>
+                  {trend && <span title="Demo value" className={clsx('text-[11px] font-medium', trend.up ? 'text-ok' : 'text-bad')}>{trend.up ? '↑' : '↓'} {trend.n}</span>}
+                  {sub && <span className="truncate text-[11px] font-medium text-ink-500 lg:max-xl:hidden">{sub}</span>}
                 </span>
-                <span className="block truncate text-xs text-ink-500">{label}</span>
-                {sub && <span className="block text-[11px] font-medium text-bad">{sub}</span>}
+                <span className="block truncate text-[11px] text-ink-500">{label}</span>
               </span>
             </Link>
           ))}
         </section>
-      </div>
 
-      {/* ---------- the workshop ---------- */}
-      <div className="relative z-0 mt-1 h-[400px] overflow-hidden rounded-2xl bg-gradient-to-b from-[#eef3fa] to-[#d9e2ef] sm:h-[500px] lg:absolute lg:inset-0 lg:mt-0 lg:h-auto lg:rounded-none">
-        {view === '3d' ? (
-          <Workshop3D layout={layout} occupants={live.occupants} idle={live.idle} selectedId={selectedId} onSelect={(id) => id && setSelectedId(id)} interactive={desktop} panMode={pan} apiRef={api} padding={desktop ? { top: 190, right: 372, bottom: 112, left: 76 } : undefined} />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center p-3 lg:pb-[116px] lg:pl-[84px] lg:pr-[384px] lg:pt-[196px]">
-            <FloorPlan layout={layout} mode="view" selectedId={selectedId} onSelect={(id) => id && setSelectedId(id)} occupants={occ} className="max-h-full" />
+        <div className={clsx('relative z-0 h-[400px] overflow-hidden rounded-[24px] bg-gradient-to-b from-[#eef0f3] to-[#d9dce2] shadow-neu sm:h-[500px] lg:absolute lg:inset-0 lg:h-auto', full && '!absolute !inset-0 !h-auto !rounded-none')}>
+          {view === '3d' ? (
+            <Workshop3D layout={layout} occupants={live.occupants} idle={live.idle} selectedId={selectedId} onSelect={(id) => id && setSelectedId(id)} interactive={desktop} panMode={pan} apiRef={api} padding={desktop ? { top: 84, right: 20, bottom: 20, left: 78 } : undefined} />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center p-3 lg:pb-4 lg:pl-[78px] lg:pr-4 lg:pt-[84px]">
+              <FloorPlan layout={layout} mode="view" selectedId={selectedId} onSelect={(id) => id && setSelectedId(id)} occupants={occ} className="max-h-full" />
+            </div>
+          )}
+          <div className="glass pointer-events-none absolute bottom-3 left-3 z-10 flex items-center gap-2 rounded-full px-2.5 py-1 text-[11px] text-ink-500 lg:hidden">
+            <span className="h-1.5 w-1.5 rounded-full bg-ok" /> Live · {updated}
           </div>
-        )}
-        <div className="pointer-events-none absolute bottom-3 left-3 z-10 flex items-center gap-2 rounded-lg bg-white/80 px-2.5 py-1 text-[11px] text-ink-500 backdrop-blur lg:hidden">
-          <span className="h-1.5 w-1.5 rounded-full bg-ok" /> Live · {updated}
         </div>
-      </div>
 
-      {/* ---------- left controls ---------- */}
-      <div className="absolute left-3 top-[218px] z-20 hidden flex-col gap-3 lg:flex" role="toolbar" aria-label="Workshop view controls">
-        <div className={clsx(glass, 'flex flex-col gap-1 p-1.5')} role="tablist" aria-label="View mode">
-          {(['2d', '3d'] as const).map((v) => (
-            <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)} className={clsx('flex h-11 w-11 items-center justify-center rounded-xl text-sm font-bold transition', view === v ? 'bg-[#2563eb] text-white shadow-[0_6px_14px_rgba(37,99,235,0.35)]' : 'text-ink-700 hover:bg-white')}>{v.toUpperCase()}</button>
-          ))}
-        </div>
-        <div className={clsx(glass, 'flex flex-col gap-1 p-1.5')}>
-          <button className={clsx(ctl, pan && '!bg-[#2563eb] text-white')} aria-label="Move (pan) mode" aria-pressed={pan} title="Pan: drag to move the view" onClick={() => setPan((p) => !p)} disabled={view === '2d'}><Hand className="h-[18px] w-[18px]" /></button>
-          <button className={ctl} aria-label="Zoom in" title="Zoom in" onClick={() => api.current?.zoomIn()} disabled={view === '2d'}><Plus className="h-[18px] w-[18px]" /></button>
-          <button className={ctl} aria-label="Zoom out" title="Zoom out" onClick={() => api.current?.zoomOut()} disabled={view === '2d'}><Minus className="h-[18px] w-[18px]" /></button>
-          <button className={ctl} aria-label="Reset view" title="Reset view" onClick={() => api.current?.reset()} disabled={view === '2d'}><RotateCcw className="h-[18px] w-[18px]" /></button>
-          <button className={ctl} aria-label={full ? 'Exit fullscreen' : 'Fullscreen'} title={full ? 'Exit fullscreen' : 'Fullscreen'} onClick={() => (document.fullscreenElement ? document.exitFullscreen() : wrap.current?.requestFullscreen?.())}>{full ? <Minimize2 className="h-[18px] w-[18px]" /> : <Maximize2 className="h-[18px] w-[18px]" />}</button>
-        </div>
-        <div className={clsx(glass, 'w-[56px] px-1.5 py-2 text-center')} aria-live="polite" title="Data is kept in this browser, so this is when this page last saw a change.">
-          <span className="flex items-center justify-center gap-1 text-[11px] font-bold"><span className="h-2 w-2 rounded-full bg-ok" /> Live</span>
-          <span className="mt-0.5 block text-[9px] leading-tight text-ink-500">{updated.replace('Updated ', '')}</span>
+        <div className="absolute left-3 top-3 z-20 hidden flex-col gap-2 lg:flex" role="toolbar" aria-label="Workshop view controls">
+          <div className={clsx(float, 'flex flex-col gap-0.5 p-1')} role="tablist" aria-label="View mode">
+            {(['2d', '3d'] as const).map((v) => (
+              <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)} className={clsx('flex h-10 w-10 items-center justify-center rounded-xl text-[13px] font-semibold transition-colors', view === v ? 'bg-[#4f7ea8] text-white' : 'text-ink-700 hover:bg-ink-500/[0.08]')}>{v.toUpperCase()}</button>
+            ))}
+          </div>
+          <div className={clsx(float, 'flex flex-col gap-0.5 p-1')}>
+            <button className={clsx(ctl, pan && '!bg-[#4f7ea8] text-white')} aria-label="Move (pan) mode" aria-pressed={pan} title="Pan: drag to move the view" onClick={() => setPan((p) => !p)} disabled={view === '2d'}><Hand className="h-[18px] w-[18px]" /></button>
+            <button className={ctl} aria-label="Zoom in" title="Zoom in" onClick={() => api.current?.zoomIn()} disabled={view === '2d'}><Plus className="h-[18px] w-[18px]" /></button>
+            <button className={ctl} aria-label="Zoom out" title="Zoom out" onClick={() => api.current?.zoomOut()} disabled={view === '2d'}><Minus className="h-[18px] w-[18px]" /></button>
+            <button className={ctl} aria-label="Reset view" title="Reset view" onClick={() => api.current?.reset()} disabled={view === '2d'}><RotateCcw className="h-[18px] w-[18px]" /></button>
+            <button className={ctl} aria-label={full ? 'Exit fullscreen' : 'Fullscreen'} title={full ? 'Exit fullscreen' : 'Fullscreen'} onClick={() => (document.fullscreenElement ? document.exitFullscreen() : wrap.current?.requestFullscreen?.())}>{full ? <Minimize2 className="h-[18px] w-[18px]" /> : <Maximize2 className="h-[18px] w-[18px]" />}</button>
+          </div>
+          <div className={clsx(float, 'w-12 px-1 py-1.5 text-center')} aria-live="polite" title="Data is kept in this browser, so this is when this page last saw a change.">
+            <span className="flex items-center justify-center gap-1 text-[10.5px] font-semibold"><span className="h-1.5 w-1.5 rounded-full bg-ok" /> Live</span>
+            <span className="mt-0.5 block text-[9px] leading-tight text-ink-500">{updated.replace('Updated ', '')}</span>
+          </div>
         </div>
       </div>
 
       {/* ---------- right column: bay panel + schedule ---------- */}
-      <div className="relative z-20 mt-4 flex flex-col gap-3 lg:pointer-events-none lg:absolute lg:bottom-[112px] lg:right-5 lg:top-[146px] lg:mt-0 lg:w-[352px] lg:overflow-y-auto lg:pr-0.5 thin-scroll">
-        <section className={clsx(glass, 'p-4 lg:pointer-events-auto')} aria-label="Selected bay">
+      <div className="thin-scroll flex flex-col gap-3 lg:h-[calc(100vh-272px)] lg:min-h-[470px] lg:overflow-y-auto">
+        <section className="neu shrink-0 p-4" aria-label="Selected bay">
           {bay ? (
             <>
               <div className="flex items-center justify-between gap-2">
@@ -210,14 +205,14 @@ export function LiveHero() {
               </div>
               {job && veh ? (
                 <>
-                  <div className="mt-3 flex gap-1 rounded-xl bg-[#e9eef6] p-1 text-xs font-semibold" role="tablist" aria-label="Bay details">
+                  <div className="mt-3 flex gap-1 rounded-xl bg-[#e9ebef] p-1 text-xs font-semibold" role="tablist" aria-label="Bay details">
                     {([['overview', 'Overview'], ['details', 'Job Details'], ['timeline', 'Timeline']] as const).map(([k, l]) => (
                       <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={clsx('h-8 flex-1 rounded-lg transition', tab === k ? 'bg-white text-ink shadow-neu-xs' : 'text-ink-500 hover:text-ink')}>{l}</button>
                     ))}
                   </div>
                   {tab === 'overview' && (
                     <div className="mt-3 space-y-2.5 text-[13px]">
-                      <div className="flex items-center gap-3 rounded-xl bg-white/70 p-2.5">
+                      <div className="flex items-center gap-3 rounded-xl bg-ink-500/[0.06] p-2.5">
                         <VehicleImage carKey={veh.carKey} className="h-11 w-[72px]" />
                         <div className="min-w-0 flex-1 leading-tight"><p className="truncate font-bold">{vehicleName(veh)}</p><p className="text-xs text-ink-500">{veh.reg}</p></div>
                         <span className="rounded-md bg-info-soft px-1.5 py-0.5 text-[10.5px] font-semibold text-info">Job #{job.id}</span>
@@ -232,7 +227,7 @@ export function LiveHero() {
                   {tab === 'details' && (
                     <ul className="mt-3 space-y-1.5 text-[13px]" aria-label="Tasks">
                       {job.tasks.map((t) => (
-                        <li key={t.id} className="flex items-center gap-2 rounded-lg bg-white/70 px-2.5 py-1.5"><span className={clsx('h-2 w-2 rounded-full', t.status === 'Completed' ? 'bg-ok' : t.status === 'In Progress' ? 'bg-warn' : 'bg-ink-200')} /><span className="flex-1 truncate">{t.title}</span><span className="text-[11px] text-ink-500">{t.status}</span></li>
+                        <li key={t.id} className="flex items-center gap-2 rounded-lg bg-ink-500/[0.06] px-2.5 py-1.5"><span className={clsx('h-2 w-2 rounded-full', t.status === 'Completed' ? 'bg-ok' : t.status === 'In Progress' ? 'bg-warn' : 'bg-ink-200')} /><span className="flex-1 truncate">{t.title}</span><span className="text-[11px] text-ink-500">{t.status}</span></li>
                       ))}
                       <li className="px-1 pt-1 text-xs text-ink-500">Priority: <b className="text-ink-700">{job.priority}</b></li>
                     </ul>
@@ -240,7 +235,7 @@ export function LiveHero() {
                   {tab === 'timeline' && (
                     <ul className="mt-3 space-y-2 text-[13px]" aria-label="Activity">
                       {job.activity.slice(0, 5).map((a) => (
-                        <li key={a.id} className="rounded-lg bg-white/70 px-2.5 py-1.5"><p className="leading-snug">{a.text}</p><p className="text-[11px] text-ink-500">{a.by} · {a.at}</p></li>
+                        <li key={a.id} className="rounded-lg bg-ink-500/[0.06] px-2.5 py-1.5"><p className="leading-snug">{a.text}</p><p className="text-[11px] text-ink-500">{a.by} · {a.at}</p></li>
                       ))}
                     </ul>
                   )}
@@ -249,9 +244,9 @@ export function LiveHero() {
                     <div className="relative flex flex-[1.5]">
                       <button className="btn btn-dark h-10 flex-1 text-sm" onClick={() => setMenu((m) => !m)} aria-haspopup="menu" aria-expanded={menu}>Update Status <ChevronDown className="h-4 w-4" /></button>
                       {menu && (
-                        <div role="menu" className="neu-sm slide-up absolute bottom-full right-0 z-30 mb-2 w-48 p-1.5">
+                        <div role="menu" className="glass menu-in absolute bottom-full right-0 z-30 mb-2 w-48 origin-bottom rounded-2xl p-1.5">
                           {STAGES.map((s) => (
-                            <button key={s} role="menuitem" onClick={() => { setJobStage(job.id, s, 'Admin'); setMenu(false); toast.show(`#${job.id} moved to ${STAGE_LABEL[s]}`); }} className={clsx('block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-white/70', job.stage === s && 'font-semibold text-coral-600')}>{STAGE_LABEL[s]}</button>
+                            <button key={s} role="menuitem" onClick={() => { setJobStage(job.id, s, 'Admin'); setMenu(false); toast.show(`#${job.id} moved to ${STAGE_LABEL[s]}`); }} className={clsx('block w-full rounded-[10px] px-3 py-2 text-left text-sm hover:bg-coral-500 hover:text-white', job.stage === s && 'font-semibold text-coral-600')}>{STAGE_LABEL[s]}</button>
                           ))}
                         </div>
                       )}
@@ -273,7 +268,7 @@ export function LiveHero() {
           )}
         </section>
 
-        <section className={clsx(glass, 'p-4 lg:pointer-events-auto')} aria-label="Today's schedule">
+        <section className="neu shrink-0 p-4" aria-label="Today's schedule">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-[15px] font-bold">Today&apos;s Schedule</h2>
             <Link href="/admin/calendar" className="flex items-center gap-1 text-xs font-medium text-coral-600 hover:underline">View All <ArrowRight className="h-3 w-3" /></Link>
@@ -281,10 +276,10 @@ export function LiveHero() {
           <ul>
             {schedule.map(({ job: j, time, status }) => {
               const v = vehicleOf(db, j.vehicleId);
-              const tone = status === 'In Progress' ? 'bg-info-soft text-info' : status === 'Pending' ? 'bg-warn-soft text-coral-600' : 'bg-[#efe8de] text-ink-500';
+              const tone = status === 'In Progress' ? 'bg-info-soft text-info' : status === 'Pending' ? 'bg-warn-soft text-coral-600' : 'bg-[#eceef1] text-ink-500';
               return (
                 <li key={j.id}>
-                  <Link href={`/admin/jobs/${j.id}`} className="flex items-center gap-2.5 rounded-xl px-1 py-1.5 transition hover:bg-white/60">
+                  <Link href={`/admin/jobs/${j.id}`} className="flex items-center gap-2.5 rounded-xl px-1 py-1.5 transition-colors hover:bg-ink-500/[0.06]">
                     <span className="w-[62px] shrink-0 text-[11px] text-ink-500">{time}</span>
                     {v && <VehicleImage carKey={v.carKey} className="h-7 w-12 shrink-0" />}
                     <span className="min-w-0 flex-1 leading-tight"><span className="block truncate text-xs font-semibold">{vehicleName(v)}</span><span className="block truncate text-[10.5px] text-ink-400">{j.service}</span></span>
@@ -298,37 +293,39 @@ export function LiveHero() {
         </section>
       </div>
 
-      {/* ---------- bottom bar ---------- */}
-      <div className={clsx(glass, 'relative z-20 mt-4 grid gap-4 p-3 lg:absolute lg:bottom-5 lg:left-5 lg:right-5 lg:mt-0 lg:grid-cols-[1.15fr_1.35fr_1fr] lg:items-center')}>
-        <div>
-          <p className="mb-1.5 text-[13px] font-bold">Bay Status</p>
-          <div className="grid grid-cols-2 gap-2 sm:flex">
+      </div>
+
+      {/* ---------- summary row ---------- */}
+      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-[1.15fr_1.35fr_1fr]">
+        <section className="neu p-4" aria-label="Bay status">
+          <p className="mb-2 text-[13px] font-semibold">Bay Status</p>
+          <div className="grid grid-cols-4 gap-1.5">
             {statusTile('in_use', 'In Use', live.counts.in_use)}
             {statusTile('available', 'Available', live.counts.available)}
             {statusTile('maintenance', 'Maintenance', live.counts.maintenance)}
             {statusTile('reserved', 'Reserved', live.counts.reserved)}
           </div>
-        </div>
-        <div className="lg:border-l lg:border-ivory-300/70 lg:pl-4">
-          <p className="mb-1.5 text-[13px] font-bold">Active Jobs</p>
-          <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-1">
-            {jobTile('Total', active.length, '#2f6bff')}
-            {jobTile('Inspection', group(['inspection']), '#2f6bff')}
-            {jobTile('Diagnostics', group(['diagnostics']), '#7456f0')}
-            {jobTile('In Repair', group(['in_repair']), '#f26a2e')}
-            {jobTile('Others', group(['quality_check', 'ready', 'pending']), '#8d8d90')}
+        </section>
+        <section className="neu p-4" aria-label="Active jobs">
+          <p className="mb-2 text-[13px] font-semibold">Active Jobs</p>
+          <div className="grid grid-cols-5 gap-1.5">
+            {jobTile('Total', active.length, '#1d1e22')}
+            {jobTile('Inspection', group(['inspection']), '#5f8fb8')}
+            {jobTile('Diagnostics', group(['diagnostics']), '#7d86b5')}
+            {jobTile('In Repair', group(['in_repair']), '#d84a27')}
+            {jobTile('Others', group(['quality_check', 'ready', 'pending']), '#8f9299')}
           </div>
-        </div>
-        <div className="lg:border-l lg:border-ivory-300/70 lg:pl-4">
-          <p className="mb-1.5 text-[13px] font-bold">Quick Actions</p>
-          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+        </section>
+        <section className="neu p-4 md:col-span-2 xl:col-span-1" aria-label="Quick actions">
+          <p className="mb-2 text-[13px] font-semibold">Quick Actions</p>
+          <div className="grid grid-cols-4 gap-1.5">
             {quick.map(({ icon: Icon, label, href, on }) => {
-              const inner = (<><Icon className="h-[17px] w-[17px] text-ink-700" /><span className="mt-1 hidden text-[10.5px] font-medium leading-tight min-[1500px]:block max-lg:block">{label}</span></>);
-              const cls = 'neu-sm flex h-[58px] flex-col items-center justify-center !rounded-xl px-1 text-center transition hover:-translate-y-0.5';
+              const inner = (<><Icon className="h-[18px] w-[18px] text-ink-700" strokeWidth={1.8} /><span className="mt-1 text-[10px] font-medium leading-tight text-ink-600">{label}</span></>);
+              const cls = 'flex h-[60px] flex-col items-center justify-center rounded-xl bg-ink-500/[0.06] px-1 text-center transition hover:bg-ink-500/[0.1] active:scale-[0.97]';
               return href ? <Link key={label} href={href} className={cls} aria-label={label} title={label}>{inner}</Link> : <button key={label} onClick={on} className={cls} aria-label={label} title={label}>{inner}</button>;
             })}
           </div>
-        </div>
+        </section>
       </div>
       {toast.node}
     </div>

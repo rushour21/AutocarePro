@@ -9,6 +9,7 @@ import { addJobPhoto, completeChecklist, toggleChecklist } from '@/lib/actions';
 import { getJobFor } from '@/lib/access';
 import { useSession } from '@/lib/auth';
 import { STAGE_LABEL, vehicleName, vehicleOf } from '@/lib/format';
+import { openApprovals } from '@/lib/jobflow';
 import { useDb } from '@/lib/store';
 
 const SAMPLE = ['disc-orange', 'disc-dark', 'garage-1', 'estimate-disc'].map((n) => `/assets/photos/${n}.jpg`);
@@ -24,6 +25,7 @@ export default function ChecklistPage() {
   const v = vehicleOf(db, job.vehicleId);
   const done = job.checklist.filter((c) => c.done).length;
   const pct = Math.round((done / job.checklist.length) * 100);
+  const waiting = openApprovals(db, job).length;
 
   return (
     <div className="mx-auto max-w-[760px]">
@@ -51,9 +53,10 @@ export default function ChecklistPage() {
             </li>
           ))}
         </ul>
+        {waiting > 0 && <p className="neu-in-sm mt-5 p-3 text-sm text-warn-strong">{waiting} {waiting === 1 ? 'item still needs' : 'items still need'} approval. Finish them before completing the job.</p>}
         <div className="mt-5 grid grid-cols-2 gap-3">
           <Button variant="soft" size="lg" onClick={() => toast.show('Progress saved')}>Save Progress</Button>
-          <Button size="lg" onClick={() => { completeChecklist(job.id, user.name); toast.show('Checklist completed — job moved to Quality Check'); setTimeout(() => router.push(`/employee/jobs/${job.id}`), 900); }}>Mark as Complete</Button>
+          <Button size="lg" disabled={waiting > 0} onClick={() => { completeChecklist(job.id, user.name); toast.show('Checklist completed — job moved to Quality Check'); setTimeout(() => router.push(`/employee/jobs/${job.id}`), 900); }}>Mark as Complete</Button>
         </div>
       </Card>
       {toast.node}

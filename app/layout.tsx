@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description: 'AutoHub connects garage owners, workshop technicians and vehicle owners in one workflow.',
 };
 
-export const viewport: Viewport = { themeColor: '#f6eee4', width: 'device-width', initialScale: 1 };
+export const viewport: Viewport = { themeColor: '#e4e6ea', width: 'device-width', initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

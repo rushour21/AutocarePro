@@ -5,6 +5,7 @@ import { Maximize2, Minimize2, RotateCcw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { BAY_STATUS_LABEL, bayType } from '@/lib/layout';
 import type { WorkshopLayout } from '@/lib/types';
+import { Select } from '@/components/ui';
 import { STATUS_COLOR, useBayLive } from '@/components/features/three/useLive';
 import { Workshop3D } from '@/components/features/three/Workshop3D';
 import type { SceneApi } from '@/components/features/three/WorkshopScene3D';
@@ -28,14 +29,14 @@ export function Workshop3DPreview({ layout, selectedId, onSelect }: { layout: Wo
     </button>
   );
   return (
-    <div ref={wrap} className={clsx('flex flex-col overflow-hidden rounded-2xl bg-gradient-to-b from-[#eef3fa] to-[#dde5f0] md:flex-row', full ? 'h-screen' : 'h-[620px]')}>
+    <div ref={wrap} className={clsx('flex flex-col overflow-hidden rounded-2xl bg-gradient-to-b from-[#eef0f3] to-[#dfe2e7] md:flex-row', full ? 'h-screen' : 'h-[620px]')}>
       <div className="shrink-0 p-3 md:w-[248px]">
         <div className="neu-sm h-full !rounded-2xl p-3">
           <h3 className="mb-2 text-[13px] font-bold">3D Workshop Preview</h3>
           <div className="mb-2 flex flex-wrap gap-1" role="tablist" aria-label="Bay filter">
-            {tabBtn('all', 'All Bays', live.counts.total, '#2f6bff')}
-            {tabBtn('in_use', 'In Use', live.counts.in_use, '#f26a2e')}
-            {tabBtn('available', 'Available', live.counts.available, '#1d9d65')}
+            {tabBtn('all', 'All Bays', live.counts.total, '#5f8fb8')}
+            {tabBtn('in_use', 'In Use', live.counts.in_use, '#d84a27')}
+            {tabBtn('available', 'Available', live.counts.available, '#248a6c')}
           </div>
           <ul className="thin-scroll max-h-[180px] space-y-1.5 overflow-y-auto pr-0.5 md:max-h-[480px]">
             {rows.map((b) => {
@@ -61,11 +62,11 @@ export function Workshop3DPreview({ layout, selectedId, onSelect }: { layout: Wo
         <Workshop3D layout={layout} occupants={live.occupants} idle={live.idle} selectedId={selectedId} onSelect={onSelect} apiRef={api} />
         <div className="absolute bottom-3 right-3 z-30 flex gap-2">
           <button className="btn btn-neu h-9 px-3 text-xs" onClick={() => api.current?.reset()}><RotateCcw className="h-3.5 w-3.5" /> Reset View</button>
-          <select aria-label="Camera view" className="field h-9 !w-auto px-3 text-xs" defaultValue="iso" onChange={(e) => api.current?.preset(e.target.value as 'iso' | 'top' | 'front')}>
+          <Select aria-label="Camera view" className="w-[170px]" defaultValue="iso" onChange={(e) => api.current?.preset(e.target.value as 'iso' | 'top' | 'front')}>
             <option value="iso">Isometric View</option>
             <option value="top">Top View</option>
             <option value="front">Front View</option>
-          </select>
+          </Select>
           <button aria-label={full ? 'Exit fullscreen' : 'Fullscreen'} className="btn btn-neu h-9 w-9" onClick={() => (document.fullscreenElement ? document.exitFullscreen() : wrap.current?.requestFullscreen?.())}>
             {full ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </button>

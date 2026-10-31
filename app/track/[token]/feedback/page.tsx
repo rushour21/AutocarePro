@@ -40,7 +40,7 @@ export default function ShareFeedback() {
               onMouseLeave={() => setHover(0)}
               className="rounded-xl p-1 transition hover:scale-110 disabled:hover:scale-100"
             >
-              <Star className={clsx('h-11 w-11', n <= shown ? 'fill-[#ff8a3d] text-[#f2601f] drop-shadow-[0_4px_6px_rgba(242,96,31,0.35)]' : 'fill-[#f3e4d0] text-[#e3c9a8]')} strokeWidth={1.5} />
+              <Star className={clsx('h-11 w-11', n <= shown ? 'fill-[#d84a27] text-[#cf4320] drop-shadow-[0_4px_6px_rgba(216,74,39,0.35)]' : 'fill-[#e4e6ea] text-[#cfd2d8]')} strokeWidth={1.5} />
             </button>
           ))}
         </div>

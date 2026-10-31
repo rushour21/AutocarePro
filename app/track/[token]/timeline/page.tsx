@@ -26,8 +26,8 @@ export default function ShareTimeline() {
           const last = i === entries.length - 1;
           return (
             <li key={e.label} className="relative flex gap-4 pb-5 last:pb-0" aria-current={e.state === 'current' ? 'step' : undefined}>
-              {!last && <span className={clsx('absolute left-[17px] top-9 h-[calc(100%-24px)] w-[3px] rounded-full', e.state === 'done' ? 'bg-[#8ed8b4]' : 'bg-ivory-300')} />}
-              <span className={clsx('relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white', e.state === 'done' ? 'bg-gradient-to-b from-[#2fcf8a] to-[#17a368] shadow-[0_4px_10px_rgba(29,157,101,0.3)]' : e.state === 'current' ? 'bg-gradient-to-b from-[#ffa05f] to-[#f25a1f] shadow-coral' : 'neu-sm !rounded-full text-ink-400')}>
+              {!last && <span className={clsx('absolute left-[17px] top-9 h-[calc(100%-24px)] w-[3px] rounded-full', e.state === 'done' ? 'bg-[#9fd4c4]' : 'bg-ivory-300')} />}
+              <span className={clsx('relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white', e.state === 'done' ? 'bg-gradient-to-b from-[#3fae90] to-[#248a6c] shadow-[0_4px_10px_rgba(36,138,108,0.3)]' : e.state === 'current' ? 'bg-gradient-to-b from-[#e4633f] to-[#cf4320] shadow-coral' : 'neu-sm !rounded-full text-ink-400')}>
                 {e.state === 'done' ? <Check className="h-[18px] w-[18px]" strokeWidth={3} /> : e.state === 'current' ? <Circle className="h-3.5 w-3.5 fill-white" /> : <Dot className="h-6 w-6" strokeWidth={5} />}
               </span>
               <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-x-4 gap-y-1">

@@ -158,7 +158,7 @@ export function LayoutStudio({ preview }: { preview?: (layout: WorkshopLayout, s
       ? { tone: 'amber', text: draftSaved ? 'Draft saved. Not published yet.' : 'Unsaved changes.' }
       : { tone: 'green', text: `Published (version ${g.layoutVersion})${g.publishedAt ? ` · ${new Date(g.publishedAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}` };
 
-  const toolBtn = (active: boolean) => clsx('flex h-[58px] flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-semibold transition', active ? 'bg-gradient-to-b from-[#3b82f6] to-[#2563eb] text-white shadow-[0_6px_14px_rgba(37,99,235,0.35)]' : 'neu-sm text-ink-600 hover:-translate-y-0.5');
+  const toolBtn = (active: boolean) => clsx('flex h-[58px] flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-semibold transition', active ? 'bg-gradient-to-b from-[#6b97bf] to-[#4f7ea8] text-white shadow-[0_6px_14px_rgba(79,126,168,0.35)]' : 'neu-sm text-ink-600 hover:-translate-y-0.5');
 
   return (
     <>

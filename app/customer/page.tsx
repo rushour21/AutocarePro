@@ -3,10 +3,9 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, CalendarCheck, Car, CheckCircle2, CircleDollarSign, Clock, Receipt, Wrench } from 'lucide-react';
+import { CalendarCheck, Car, CheckCircle2, CircleDollarSign, Clock, Receipt, Wrench } from 'lucide-react';
 import { TopBar } from '@/components/layout/AppShell';
-import { WorkshopLiveView } from '@/components/features/WorkshopLiveView';
-import { Button, Card, ProgressBar, StatCard, StatusBadge, VehicleImage } from '@/components/ui';
+import { Button, Card, Greeting, ProgressBar, StatCard, StatusBadge, VehicleImage } from '@/components/ui';
 import { visibleBookings, visibleEstimates, visibleInvoices, visibleJobs } from '@/lib/access';
 import { useSession } from '@/lib/auth';
 import { inr, isActive, STAGE_LABEL, vehicleName, vehicleOf } from '@/lib/format';
@@ -29,7 +28,6 @@ export default function CustomerDashboard() {
   const booking = visibleBookings(db, user)[0];
   const bv = booking && vehicleOf(db, booking.vehicleId);
   const iv = invoice && vehicleOf(db, invoice.vehicleId);
-  const unread = db.notifications.filter((n) => n.customerId === user.customerId && !n.read).length;
 
   const sentence = [
     active.length ? `Your ${active.map((j) => vehicleName(vehicleOf(db, j.vehicleId))).join(' and ')} ${active.length > 1 ? 'are' : 'is'} in service` : 'None of your vehicles are in service right now',
@@ -39,7 +37,7 @@ export default function CustomerDashboard() {
   return (
     <>
       <TopBar search={{ value: q, onChange: setQ, placeholder: 'Search anything...', onSubmit: () => router.push('/customer/history') }} showUser />
-      <h1 className="text-[28px] font-bold leading-tight tracking-tight">Good morning, {user.name.split(' ')[0]} <span>👋</span></h1>
+      <h1 className="text-[28px] font-bold leading-tight tracking-tight"><Greeting name={user.name.split(' ')[0]} /> <span>👋</span></h1>
       <p className="mb-6 mt-1 text-sm text-ink-500">{sentence}</p>
 
       <div className="mb-6 grid grid-cols-3 gap-3 lg:hidden">
@@ -99,10 +97,6 @@ export default function CustomerDashboard() {
         </Card>
       </section>
 
-      <section className="mt-5 lg:hidden">
-        <h2 className="mb-3 flex items-center justify-between text-lg font-bold">Live Workshop {unread > 0 && <Link href="/customer/notifications" className="flex items-center gap-1 text-xs font-medium text-coral-600"><Bell className="h-3.5 w-3.5" /> {unread} new</Link>}</h2>
-        {current && <WorkshopLiveView mode="customer" variant="cover" highlightJobId={current.id} />}
-      </section>
     </>
   );
 }
