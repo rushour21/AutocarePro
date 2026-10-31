@@ -1,13 +1,13 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Camera, Check, CheckCircle2, MessageCircle, Plus, Search, Trash2, UserPlus, X } from 'lucide-react';
 import { TopBar } from '@/components/layout/AppShell';
 import { DayPicker } from '@/components/ui/DayPicker';
 import { Button, Card, Field, Input, SearchInput, Select, Textarea, VehicleImage } from '@/components/ui';
-import { addCustomer, addVehicle, checkInJob } from '@/lib/actions';
+import { CAR_UNKNOWN, addCustomer, addVehicle, checkInJob, linkBookingToJob, updateVehicleName } from '@/lib/actions';
 import { BELONGINGS, FUEL_LEVELS, ISSUE_GROUPS, ISSUE_SUGGESTS, MODELS, REG_RE, SERVICE_CATALOG, VISIT_REASONS, normReg } from '@/lib/catalog';
 import { customerOf, estimateTotals, inr, km, vehicleName } from '@/lib/format';
 import { INSURERS, TODAY_ISO } from '@/lib/insurance';
@@ -46,6 +46,7 @@ const toggle = <T,>(list: T[], x: T) => (list.includes(x) ? list.filter((i) => i
 export default function CheckInPage() {
   const db = useDb();
   const router = useRouter();
+  const [bookingId, setBookingId] = useState<string | null>(null);
   const techs = db.users.filter((u) => u.role === 'technician' && u.title === 'Technician');
   const load = (id: string) => db.jobs.filter((j) => j.techId === id && j.stage !== 'delivered').length;
 
@@ -74,8 +75,30 @@ export default function CheckInPage() {
   const [method, setMethod] = useState<ApprovalMethod>('In person');
   const [err, setErr] = useState<Record<string, string>>({});
   const [doneId, setDoneId] = useState('');
+  const [carName, setCarName] = useState({ make: '', model: '' });
+
+  // a confirmed booking fills in what the customer already told us; the store may load after the first render
+  const booking = db.bookings.find((b) => b.id === bookingId);
+  const applied = useRef(false);
+  useEffect(() => setBookingId(new URLSearchParams(window.location.search).get('booking')), []);
+  useEffect(() => {
+    if (!booking || applied.current) return;
+    applied.current = true;
+    const d = booking.details;
+    setVehicleId(booking.vehicleId);
+    const reading = d?.car.odometer ?? db.vehicles.find((v) => v.id === booking.vehicleId)?.odometer;
+    setOdometer(reading ? String(reading) : '');
+    setComplaint(booking.notes ?? '');
+    if (!d) return;
+    setReasons(d.reasons);
+    setIssues(d.issues);
+    setWork(d.services.flatMap((name) => SERVICE_CATALOG.filter((s) => s.label === name).map((s) => ({ name, type: s.type, amount: s.price, cat: s.cat }))));
+    if (d.reasons.includes('breakdown')) setUrgent(true);
+    if (d.car.insurer) setClaim((c) => ({ ...c, insurer: d.car.insurer }));
+  }, [booking, db.vehicles]);
 
   const vehicle = db.vehicles.find((v) => v.id === vehicleId);
+  const carPending = vehicle?.model === CAR_UNKNOWN.model;
   const owner = vehicle && customerOf(db, vehicle.customerId);
   const results = useMemo(() => {
     const s = q.trim().toLowerCase().replace(/\s/g, '');
@@ -108,6 +131,7 @@ export default function CheckInPage() {
 
   const validate = () => {
     const e: Record<string, string> = {};
+    if (carPending && (!carName.make.trim() || !carName.model.trim())) e.carName = 'Enter the make and model';
     if (adding) {
       if (!REG_RE.test(nv.reg.trim())) e.reg = 'Use a format like MH12AB1234';
       else if (db.vehicles.some((v) => v.reg === normReg(nv.reg))) e.reg = 'This car is already saved. Search for it instead.';
@@ -130,17 +154,20 @@ export default function CheckInPage() {
       return;
     }
     let vid = vehicleId;
+    if (carPending) updateVehicleName(vid, carName.make.trim(), carName.model.trim());
     if (adding) {
       const cid = addCustomer({ name: nv.name.trim(), phone: nv.phone.trim() });
       vid = addVehicle({ customerId: cid, make: nv.make.trim(), model: nv.model.trim(), variant: '—', fuel: nv.fuel, carKey: nv.carKey, reg: normReg(nv.reg), year: 2022, odometer: Number(odometer.replace(/,/g, '')), serviceInDays: 90 });
     }
-    setDoneId(checkInJob({
+    const id = checkInJob({
       vehicleId: vid, techId, priority: urgent ? 'High' : 'Medium', dueIn: due, work,
       checkin: { reasons, issues, complaint: complaint.trim(), odometer: Number(odometer.replace(/,/g, '')), fuel, broughtBy, belongings, photos: photos.filter(Boolean), repeatOf: repeatOf || undefined },
       approval: approved ? method : undefined,
       insurance: insurance ? claim : undefined,
       by: 'Admin',
-    }));
+    });
+    if (booking) linkBookingToJob(booking.id, id);
+    setDoneId(id);
     window.scrollTo({ top: 0 });
   };
 
@@ -172,7 +199,7 @@ export default function CheckInPage() {
       <div className="mx-auto max-w-[860px] space-y-4">
         <div>
           <h1 className="text-[26px] font-bold">Check In a Car</h1>
-          <p className="text-sm text-ink-500">Record what you know now. The technician adds the rest after inspection.</p>
+          <p className="text-sm text-ink-500">{booking ? `Filled in from booking ${booking.id}. Check the details and confirm.` : 'Record what you know now. The technician adds the rest after inspection.'}</p>
         </div>
 
         <Part n={1} title="Find the car" hint="Search by car number, phone or name">
@@ -217,6 +244,16 @@ export default function CheckInPage() {
             </>
           )}
         </Part>
+
+        {carPending && (
+          <Card className="p-4 sm:p-6">
+            <h2 className="mb-3 text-lg font-bold">Car details from the quick booking</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Make *" error={err.carName}><Input value={carName.make} onChange={(e) => setCarName({ ...carName, make: e.target.value })} placeholder="Honda" /></Field>
+              <Field label="Model *"><Input value={carName.model} onChange={(e) => setCarName({ ...carName, model: e.target.value })} placeholder="City" /></Field>
+            </div>
+          </Card>
+        )}
 
         <Part n={2} title="Why has the car come in?" hint="Choose all that apply">
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">

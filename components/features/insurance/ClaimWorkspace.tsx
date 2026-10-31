@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { CheckCircle2, ExternalLink, FileText, Link2, Loader2, Phone } from 'lucide-react';
-import { Button, Card, Modal, Select, StatusBadge, useToast } from '@/components/ui';
+import { Button, Card, FilterTabs, Modal, Select, StatusBadge, useToast } from '@/components/ui';
 import { generateClaimPack, setClaimStatus } from '@/lib/actions';
 import { customerOf, inr, vehicleName, vehicleOf } from '@/lib/format';
-import { claimPending, daysOpen, flowFor, fmtAt, fmtDate, missingDocs, payoutOf, splitOf } from '@/lib/insurance';
+import { claimPending, flowFor, fmtDate, missingDocs, payoutOf, splitOf } from '@/lib/insurance';
 import { useSession } from '@/lib/auth';
 import { DocLink } from '@/components/features/Documents';
 import { BeforeAfter } from '@/components/features/BeforeAfter';
@@ -126,6 +126,7 @@ export function ClaimWorkspace({ claimId, embedded }: { claimId: string; embedde
   const toast = useToast();
   const { user } = useSession();
   const [pack, setPack] = useState(false);
+  const [tab, setTab] = useState<'claim' | 'photos' | 'payment' | 'repair'>('claim');
   const claim = db.claims.find((c) => c.id === claimId);
   if (!claim) return <Card className="p-8 text-center text-ink-500">Claim not found.</Card>;
   const job = db.jobs.find((j) => j.id === claim.jobId);
@@ -134,9 +135,13 @@ export function ClaimWorkspace({ claimId, embedded }: { claimId: string; embedde
   const missing = missingDocs(claim);
   const pending = claimPending(claim);
   const draft = pending.some((p) => p.blocks);
+  const split = splitOf(claim);
+
+  const next = pending[0]?.item;
+  const others = pending.filter((p) => !p.item.startsWith('Upload '));
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <Card className="p-4 sm:p-5">
         <div className="flex flex-wrap items-start gap-x-5 gap-y-3">
           <div className="min-w-0 flex-1 basis-60">
@@ -145,63 +150,59 @@ export function ClaimWorkspace({ claimId, embedded }: { claimId: string; embedde
               <ClaimStatusBadge status={claim.status} />
               <StatusBadge tone="gray" size="sm">{claim.type}</StatusBadge>
             </div>
-            <p className="mt-1 text-sm text-ink-500">{claim.insurer} · {daysOpen(claim)} days open</p>
-            <p className="mt-2 text-sm font-semibold">{vehicleName(v)} <span className="font-normal text-ink-500">· {v?.reg}</span></p>
+            <p className="mt-1 text-sm font-semibold">{vehicleName(v)} <span className="font-normal text-ink-500">· {v?.reg}</span></p>
             <p className="flex flex-wrap items-center gap-x-3 text-sm text-ink-500">
               <span>{cust?.name}</span>
-              {cust && <a href={`tel:${cust.phone.replace(/\s/g, '')}`} className="inline-flex items-center gap-1 text-coral-600"><Phone className="h-3.5 w-3.5" /> {cust.phone}</a>}
+              <span>{claim.insurer}</span>
+              {cust && <a href={`tel:${cust.phone.replace(/\s/g, '')}`} className="inline-flex items-center gap-1 text-coral-600"><Phone className="h-3.5 w-3.5" /> Call</a>}
               {job && !embedded && <Link href={`/admin/jobs/${job.id}`} className="inline-flex items-center gap-1 text-coral-600">Job #{job.id} <ExternalLink className="h-3 w-3" /></Link>}
             </p>
           </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto">
-            <label className="text-xs font-medium text-ink-500">Claim status
-              <Select className="mt-1" value={claim.status} onChange={(e) => setClaimStatus(claim.id, e.target.value as Claim['status'])}>
-                {flowFor(claim.type).map((s) => <option key={s}>{s}</option>)}
-              </Select>
-            </label>
-            <Button onClick={() => setPack(true)}><FileText className="h-4 w-4" /> {draft ? 'Generate draft pack' : claim.packAt ? 'Regenerate claim pack' : 'Generate claim pack'}</Button>
-            {job && <DocLink kind="claim" docKey={job.trackingToken} className="btn btn-neu h-11 px-5 text-sm">Download claim pack</DocLink>}
-            {claim.packAt && (
-              <Link href={surveyorPath(claim.id)} target="_blank" className="inline-flex items-center gap-1.5 text-xs font-medium text-coral-600"><ExternalLink className="h-3.5 w-3.5" /> Open surveyor view</Link>
-            )}
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+            <div className="min-w-[170px] flex-1 sm:flex-none"><Select aria-label="Claim status" value={claim.status} onChange={(e) => setClaimStatus(claim.id, e.target.value as Claim['status'])}>{flowFor(claim.type).map((st) => <option key={st}>{st}</option>)}</Select></div>
+            <Button onClick={() => setPack(true)}><FileText className="h-4 w-4" /> {draft ? 'Draft pack' : 'Claim pack'}</Button>
+            {job && <DocLink kind="claim" docKey={job.trackingToken} className="btn btn-neu h-11 px-4 text-sm">PDF</DocLink>}
           </div>
         </div>
-        {claim.customerApprovedAt ? (
-          <p className="mt-4 flex items-center gap-2 rounded-xl bg-ok-soft px-3 py-2 text-sm text-ok"><CheckCircle2 className="h-4 w-4" /> Customer approved their share of {inr(splitOf(claim).customer)} on {fmtAt(claim.customerApprovedAt)}</p>
-        ) : claim.lines.length > 0 ? (
-          <p className="mt-4 rounded-xl bg-warn-soft px-3 py-2 text-sm text-warn">Customer has not approved their share of {inr(splitOf(claim).customer)} yet.</p>
-        ) : null}
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {[['Total', inr(split.total)], ['Insurer pays', inr(payoutOf(claim).insurer)], ['Customer pays', inr(payoutOf(claim).customer)]].map(([k, val]) => <div key={k} className="rounded-xl bg-ivory-100 px-3 py-2"><p className="text-xs text-ink-500">{k}</p><p className="font-bold">{val}</p></div>)}
+        </div>
+        {next ? <p className="mt-3 rounded-xl bg-warn-soft px-3 py-2 text-sm text-warn-strong"><b>Next:</b> {next}{pending.length > 1 ? ` (+${pending.length - 1} more)` : ''}</p> : <p className="mt-3 flex items-center gap-2 rounded-xl bg-ok-soft px-3 py-2 text-sm text-ok"><CheckCircle2 className="h-4 w-4" /> Nothing pending on this claim</p>}
       </Card>
 
-      {job && <Section title="Before and after photos"><BeforeAfter job={job} by={user?.name ?? 'Team'} onError={toast.show} /></Section>}
+      <FilterTabs variant="soft" value={tab} onChange={setTab} tabs={[{ value: 'claim', label: 'Claim' }, { value: 'photos', label: 'Photos' }, { value: 'payment', label: 'Payment' }, { value: 'repair', label: 'Repair' }]} />
 
-      {pending.length > 0 && (
-        <Section title={`Pending for this claim (${pending.length})`}>
-          <ul className="grid gap-2 sm:grid-cols-2">
-            {pending.map((p) => <li key={p.item} className="flex items-center justify-between gap-3 rounded-xl bg-ivory-100 px-3 py-2 text-sm"><span>{p.item}</span>{p.blocks && <StatusBadge tone="amber" size="sm">Needed to send</StatusBadge>}</li>)}
-          </ul>
-        </Section>
-      )}
-
-      <div className="grid gap-5 xl:grid-cols-2">
-        <div className="space-y-5">
-          <Section title="Claim details"><ClaimDetails claim={claim} /></Section>
+      {tab === 'claim' && (
+        <div className="grid gap-4 xl:grid-cols-2">
           <Section title="Documents" aside={<StatusBadge tone={missing.length ? 'amber' : 'green'} size="sm">{missing.length ? `${missing.length} missing` : 'Complete'}</StatusBadge>}>
             <DocChecklist claim={claim} onToast={toast.show} />
           </Section>
-          <Section title="Photos" aside={<StatusBadge tone="gray" size="sm">{claim.photos.filter((p) => p.uploaded).length}/{claim.photos.length}</StatusBadge>}>
-            <PhotoChecklist claim={claim} />
-          </Section>
+          <div className="space-y-4">
+            {others.length > 0 && <Section title="Also pending"><ul className="space-y-1.5 text-sm">{others.map((p) => <li key={p.item} className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-warn" /> {p.item}</li>)}</ul></Section>}
+            <Section title="Claim details"><ClaimDetails claim={claim} /></Section>
+            <details className="neu p-4 sm:p-5">
+              <summary className="cursor-pointer font-bold">Claim history</summary>
+              <div className="mt-3 space-y-4"><SlaList claim={claim} /><ClaimTimeline claim={claim} /></div>
+            </details>
+          </div>
         </div>
-        <div className="space-y-5">
-          <Section title="Estimate split"><EstimateSplit claim={claim} /></Section>
-          <Section title="Cashless and reimbursement split"><PayoutSplit claim={claim} /></Section>
-          <Section title="Timelines (reference)"><SlaList claim={claim} /></Section>
-          <Section title="Claim timeline"><ClaimTimeline claim={claim} /></Section>
-        </div>
-      </div>
+      )}
 
-      {job && <RepairDetails job={job} by={user?.name ?? 'Team'} />}
+      {tab === 'photos' && (
+        <div className="space-y-4">
+          {job && <Section title="Before and after"><BeforeAfter job={job} by={user?.name ?? 'Team'} onError={toast.show} /></Section>}
+          <Section title="Required by the insurer" aside={<StatusBadge tone="gray" size="sm">{claim.photos.filter((p) => p.uploaded).length}/{claim.photos.length}</StatusBadge>}><PhotoChecklist claim={claim} /></Section>
+        </div>
+      )}
+
+      {tab === 'payment' && (
+        <div className="space-y-4">
+          <Section title="Who pays what"><PayoutSplit claim={claim} /></Section>
+          <Section title="Estimate"><EstimateSplit claim={claim} /></Section>
+        </div>
+      )}
+
+      {tab === 'repair' && job && <RepairDetails job={job} by={user?.name ?? 'Team'} />}
 
       <ClaimPackModal claim={claim} open={pack} draft={draft} onClose={() => setPack(false)} onToast={toast.show} />
       {toast.node}

@@ -5,7 +5,7 @@ import { TopBar } from '@/components/layout/AppShell';
 import { Button, EmptyState, PageHeader, StatusBadge, VehicleImage } from '@/components/ui';
 import { visibleBookings } from '@/lib/access';
 import { useSession } from '@/lib/auth';
-import { vehicleName, vehicleOf } from '@/lib/format';
+import { BOOKING_TONE, vehicleName, vehicleOf } from '@/lib/format';
 import { useDb } from '@/lib/store';
 
 export default function BookingsPage() {
@@ -24,8 +24,8 @@ export default function BookingsPage() {
             return (
               <li key={b.id} className="neu flex items-center gap-5 !rounded-[22px] px-5 py-4">
                 {v && <VehicleImage carKey={v.carKey} className="h-14 w-28" />}
-                <div className="flex-1"><p className="font-bold">{vehicleName(v)}</p><p className="text-sm text-ink-500">{b.service}</p><p className="text-sm text-ink-500">{b.date} · {b.time}</p></div>
-                <StatusBadge tone={b.status === 'Confirmed' ? 'green' : 'amber'}>{b.status}</StatusBadge>
+                <div className="flex-1"><p className="font-bold">{vehicleName(v)}</p><p className="text-sm text-ink-500">{b.service}</p><p className="text-sm text-ink-500">{b.date} · {b.time}</p>{b.declineReason && <p className="text-sm text-bad">{b.declineReason}</p>}</div>
+                <StatusBadge tone={BOOKING_TONE[b.status]}>{b.status}</StatusBadge>
               </li>
             );
           })}

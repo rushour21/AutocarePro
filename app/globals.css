@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 :root {
+  --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
   --ivory: #e4e6ea;
   --coral: #d84a27;
   --steel: #78a2c6;
@@ -401,5 +402,140 @@ h3 {
   }
   .doc-avoid {
     break-inside: avoid;
+  }
+}
+
+/* landing page motion */
+.lights-on {
+  pointer-events: none;
+  opacity: 0;
+}
+.ew-label {
+  fill: #555860;
+  font-size: 17px;
+  font-weight: 600;
+  opacity: 0;
+}
+.ew-turn {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.step-desc {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+.fx {
+  scroll-behavior: smooth;
+}
+.fx body {
+  overflow-x: clip;
+}
+.fx .step-item {
+  opacity: 0.5;
+  transition: opacity 0.4s ease;
+}
+.fx .step-item.is-active {
+  opacity: 1;
+}
+.fx .step-desc {
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.4s var(--ease-out);
+}
+.fx .step-item.is-active .step-desc {
+  grid-template-rows: 1fr;
+}
+.fx .pin-wrap {
+  height: 340vh;
+  padding: 0;
+}
+.fx .pin-sticky {
+  position: sticky;
+  top: 0;
+  min-height: 100svh;
+  align-content: center;
+  padding-top: 72px;
+}
+.fx [data-reveal] {
+  opacity: 0;
+  filter: blur(6px);
+  transform: translateY(28px);
+  transition: opacity 0.8s var(--ease-premium), transform 0.8s var(--ease-premium), filter 0.8s var(--ease-premium);
+  transition-delay: var(--d, 0ms);
+}
+.fx [data-reveal].is-in {
+  opacity: 1;
+  filter: none;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero-rise {
+    animation: hero-rise 0.9s var(--ease-premium) both;
+    animation-delay: calc(var(--d, 0) * 1ms + 750ms);
+  }
+  .hero-zoom > svg {
+    animation: hero-zoom 2.6s var(--ease-premium) both;
+  }
+  .lights-on {
+    animation: lights-on 1.15s linear both;
+  }
+  .marquee {
+    animation: marquee 60s linear infinite;
+  }
+}
+
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+}
+@keyframes hero-zoom {
+  from {
+    transform: scale(1.09);
+  }
+}
+/* the workshop lights flickering on */
+@keyframes lights-on {
+  0%, 14% {
+    opacity: 1;
+  }
+  20% {
+    opacity: 0.55;
+  }
+  27% {
+    opacity: 1;
+  }
+  44% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* 3D view loader: a workshop blueprint */
+.scene-grid {
+  background-color: #eef1f5;
+  background-image: linear-gradient(rgba(95, 143, 184, 0.14) 1px, transparent 1px), linear-gradient(90deg, rgba(95, 143, 184, 0.14) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .scene-bay {
+    animation: scene-bay 1.6s ease-in-out infinite;
+  }
+}
+@keyframes scene-bay {
+  50% {
+    background: rgba(95, 143, 184, 0.16);
+    border-color: rgba(216, 74, 39, 0.5);
   }
 }

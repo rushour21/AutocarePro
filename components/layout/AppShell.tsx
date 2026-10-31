@@ -58,6 +58,7 @@ const NAV: Record<Role, NavItem[]> = {
   admin: [
     { href: '/admin', label: 'Dashboard', icon: LayoutGrid, exact: true },
     { href: '/admin/jobs', label: 'Jobs', icon: Wrench },
+    { href: '/admin/bookings', label: 'Bookings', icon: CalendarCheck },
     { href: '/admin/calendar', label: 'Calendar', icon: CalendarDays },
     { href: '/admin/customers', label: 'Customers', icon: Users, group: true },
     { href: '/admin/vehicles', label: 'Vehicles', icon: Car },

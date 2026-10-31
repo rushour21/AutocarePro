@@ -25,7 +25,7 @@ export default function CustomerDashboard() {
   const current = active[0];
   const cv = current && vehicleOf(db, current.vehicleId);
   const invoice = visibleInvoices(db, user)[0];
-  const booking = visibleBookings(db, user)[0];
+  const booking = visibleBookings(db, user).find((b) => b.status === 'Requested' || b.status === 'Confirmed');
   const bv = booking && vehicleOf(db, booking.vehicleId);
   const iv = invoice && vehicleOf(db, invoice.vehicleId);
 

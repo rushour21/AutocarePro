@@ -1,7 +1,7 @@
 import { mutate, getDb } from './store';
 import { estimateOfJob, estimateTotals, itemApproval, pendingItems, approvedItems, phaseOf, stagePhase, STAGE_LABEL, STEP_INDEX } from './format';
-import type { ApprovalMethod, Booking, CheckIn, ClaimType, TaskPhase, Customer, Estimate, EstimateItem, Garage, InspectionPoint, Job, PartRequest, RequestStatus, Stage, TaskStatus, User, Vehicle, Invoice, WorkshopLayout } from './types';
-import { INSPECTION_TASKS, QUALITY_TASKS } from './catalog';
+import type { ApprovalMethod, BookingDetails, CarKey, CheckIn, Db, ClaimType, TaskPhase, Customer, Estimate, EstimateItem, Garage, InspectionPoint, Job, PartRequest, RequestStatus, Stage, TaskStatus, User, Vehicle, Invoice, WorkshopLayout } from './types';
+import { INSPECTION_TASKS, normReg, QUALITY_TASKS } from './catalog';
 import { createSeed } from './seed';
 import { CLAIM_FLOW, INSURERS, TODAY_ISO, expectedFromInsurer, newDocs, newPhotos, nowIso, placeholderPhoto, splitOf } from './insurance';
 import type { Claim, ClaimDocKind, ClaimLine, ClaimStatus } from './types';
@@ -508,19 +508,79 @@ export function markAllNotificationsRead(customerId: string) {
 }
 
 // ------------------------------------------------------------------ customer booking
-export function bookService(b: Omit<Booking, 'id' | 'status'>): string {
-  let jobId = '';
+const digits = (s: string) => s.replace(/\D/g, '').slice(-10);
+const STATUS_WORD = { Requested: 'Requested', Confirmed: 'confirmed', Declined: 'declined', 'Checked In': 'checked in' } as const;
+
+export const BOOKING_SLOT_LIMIT = 3;
+/** Quick bookings have no car details yet; staff complete them at check-in. */
+export const CAR_UNKNOWN = { make: 'Car', model: 'details pending' };
+export const CALL_TO_CONFIRM = 'Call to confirm';
+export const bookingsInSlot = (db: Db, date: string, time: string) => db.bookings.filter((b) => b.date === date && b.time === time && b.status !== 'Declined').length;
+
+export interface BookingInput extends BookingDetails {
+  date: string;
+  time: string;
+  notes: string;
+  carKey: CarKey;
+  /** set when a signed-in customer picks one of their saved cars */
+  customerId?: string;
+  vehicleId?: string;
+}
+
+/**
+ * A booking is a request, not a job: the job starts when the car arrives and is checked in.
+ * Customers and cars are matched by phone and number, so a repeat visitor is not saved twice.
+ */
+export function createBooking(input: BookingInput): { ok: boolean; id?: string; error?: string } {
+  const db = getDb();
+  const reg = normReg(input.car.reg);
+  const known = db.vehicles.find((v) => v.id === input.vehicleId || v.reg === reg);
+  if (known && db.bookings.some((b) => b.vehicleId === known.id && (b.status === 'Requested' || b.status === 'Confirmed'))) return { ok: false, error: `${reg} already has an open booking.` };
+  if (!input.quick && bookingsInSlot(db, input.date, input.time) >= BOOKING_SLOT_LIMIT) return { ok: false, error: 'That time just filled up. Please pick another.' };
+  const { date, time, notes, carKey, customerId, vehicleId, ...details } = input;
+  void vehicleId;
+  const cid = customerId ?? known?.customerId ?? db.customers.find((c) => digits(c.phone) === digits(details.customer.phone))?.id ?? addCustomer({ name: details.customer.name, phone: details.customer.phone, email: details.customer.email });
+  const vid = known?.id ?? addVehicle({ customerId: cid, make: details.car.make, model: details.car.model, variant: details.car.variant || '—', fuel: details.car.fuel, carKey, reg, year: details.car.year, odometer: details.car.odometer, serviceInDays: 90 });
+  const names = details.services.length ? details.services : details.issues;
+  const service = names.length ? `${names.slice(0, 2).join(', ')}${names.length > 2 ? ` +${names.length - 2} more` : ''}` : 'Inspection and diagnosis';
+  let id = '';
   mutate((d) => {
-    const booking: Booking = { id: uid('bk'), status: 'Requested', ...b };
-    d.bookings.unshift(booking);
+    const n = Math.max(1000, ...d.bookings.map((b) => Number(b.id.replace('BK-', '')) || 0)) + 1;
+    id = `BK-${n}`;
+    d.bookings.unshift({ id, customerId: cid, vehicleId: vid, service, date, time, status: 'Requested', notes, details });
+    const v = d.vehicles.find((x) => x.id === vid);
+    if (v) v.odometer = Math.max(v.odometer, details.car.odometer);
+    d.notifications.unshift({ id: uid('n'), customerId: cid, kind: 'reminder', title: `Booking ${id} requested`, sub: `${date}, ${time}`, ago: 'Just now', read: false, href: '/customer/bookings' });
   });
-  const d = getDb();
-  const techs = d.users.filter((u) => u.role === 'technician' && u.title === 'Technician');
-  const load = (id: string) => d.jobs.filter((j) => j.techId === id && j.stage !== 'delivered').length;
-  const tech = techs.sort((a, c) => load(a.id) - load(c.id))[0];
-  const cat = /brake/i.test(b.service) ? 'brake' : /ac/i.test(b.service) ? 'ac' : /body|detail/i.test(b.service) ? 'body' : 'service';
-  jobId = createJob({ vehicleId: b.vehicleId, service: b.service, category: cat, priority: 'Medium', techId: tech.id, notes: `Booked online for ${b.date}, ${b.time}`, by: 'Customer booking' });
-  return jobId;
+  return { ok: true, id };
+}
+
+export function setBookingStatus(id: string, status: 'Confirmed' | 'Declined', reason?: string) {
+  mutate((d) => {
+    const b = d.bookings.find((x) => x.id === id);
+    if (!b) return;
+    b.status = status;
+    b.declineReason = reason;
+    d.notifications.unshift({ id: uid('n'), customerId: b.customerId, kind: 'reminder', title: `Booking ${b.id} ${STATUS_WORD[status]}`, sub: status === 'Declined' ? reason ?? 'Please contact the workshop.' : `${b.date}, ${b.time}`, ago: 'Just now', read: false, href: '/customer/bookings' });
+  });
+}
+
+export function updateVehicleName(id: string, make: string, model: string) {
+  mutate((d) => {
+    const v = d.vehicles.find((x) => x.id === id);
+    if (!v) return;
+    v.make = make;
+    v.model = model;
+  });
+}
+
+export function linkBookingToJob(id: string, jobId: string) {
+  mutate((d) => {
+    const b = d.bookings.find((x) => x.id === id);
+    if (!b) return;
+    b.status = 'Checked In';
+    b.jobId = jobId;
+  });
 }
 
 // ------------------------------------------------------------------ check-in and job flow

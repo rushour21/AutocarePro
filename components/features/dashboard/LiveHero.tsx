@@ -7,8 +7,9 @@ import { ArrowRight, BarChart3, CalendarDays, CheckCircle2, ChevronDown, CircleD
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { TopBar } from '@/components/layout/AppShell';
 import { Avatar, Greeting, ProgressBar, StatusBadge, VehicleImage, useToast } from '@/components/ui';
+import { Gear, SpinningGear } from '@/components/ui/Mechanical';
 import { setJobStage } from '@/lib/actions';
-import { STAGE_LABEL, STAGE_TONE, estimateTotals, inr, isActive, userOf, vehicleName, vehicleOf } from '@/lib/format';
+import { BOOKING_TONE, customerOf, STAGE_LABEL, STAGE_TONE, estimateTotals, inr, isActive, userOf, vehicleName, vehicleOf } from '@/lib/format';
 import { BAY_STATUS_LABEL, bayType, occupantOf } from '@/lib/layout';
 import type { BayStatus } from '@/lib/layout';
 import { useDb } from '@/lib/store';
@@ -77,6 +78,8 @@ export function LiveHero() {
   const awaiting = db.estimates.filter((e) => e.status === 'Awaiting Approval');
   const pending = awaiting.reduce((s, e) => s + estimateTotals(e.items).subtotal, 0);
   const dueToday = active.filter((j) => j.dueIn === 0);
+  const openBookings = db.bookings.filter((b) => b.status === 'Requested' || b.status === 'Confirmed');
+  const waiting = openBookings.filter((b) => b.status === 'Requested');
   const doneToday = db.jobs.filter((j) => j.stage === 'delivered' && j.completedOn && db.today.includes(j.completedOn.split(',')[0].trim())).length;
   const group = (s: Stage[]) => active.filter((j) => s.includes(j.stage)).length;
   const schedule = active
@@ -131,7 +134,11 @@ export function LiveHero() {
           </>
         }
       />
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-3 px-1">
+      <div className="relative mb-3 flex flex-wrap items-end justify-between gap-3 px-1">
+        <div className="pointer-events-none absolute right-[300px] top-1/2 hidden h-14 w-[72px] -translate-y-1/2 lg:block" aria-hidden>
+          <SpinningGear teeth={12} seconds={28} className="absolute left-0 top-0 h-10 w-10 text-ink-500/[0.14]" />
+          <SpinningGear teeth={8} seconds={19} reverse className="absolute bottom-0 right-0 h-7 w-7 text-coral-500/25" />
+        </div>
         <div>
           <h1 className="text-[28px] font-bold leading-tight tracking-tight"><Greeting name={GREETING_NAME} /></h1>
           <p className="mt-0.5 text-[13px] text-ink-500">Here&apos;s your workshop. Everything in one view.</p>
@@ -170,7 +177,7 @@ export function LiveHero() {
             </div>
           )}
           <div className="glass pointer-events-none absolute bottom-3 left-3 z-10 flex items-center gap-2 rounded-full px-2.5 py-1 text-[11px] text-ink-500 lg:hidden">
-            <span className="h-1.5 w-1.5 rounded-full bg-ok" /> Live · {updated}
+            <SpinningGear teeth={8} seconds={6} className="h-3 w-3 text-ok" /> Live · {updated}
           </div>
         </div>
 
@@ -188,7 +195,7 @@ export function LiveHero() {
             <button className={ctl} aria-label={full ? 'Exit fullscreen' : 'Fullscreen'} title={full ? 'Exit fullscreen' : 'Fullscreen'} onClick={() => (document.fullscreenElement ? document.exitFullscreen() : wrap.current?.requestFullscreen?.())}>{full ? <Minimize2 className="h-[18px] w-[18px]" /> : <Maximize2 className="h-[18px] w-[18px]" />}</button>
           </div>
           <div className={clsx(float, 'w-12 px-1 py-1.5 text-center')} aria-live="polite" title="Data is kept in this browser, so this is when this page last saw a change.">
-            <span className="flex items-center justify-center gap-1 text-[10.5px] font-semibold"><span className="h-1.5 w-1.5 rounded-full bg-ok" /> Live</span>
+            <span className="flex items-center justify-center gap-1 text-[10.5px] font-semibold"><SpinningGear teeth={8} seconds={6} className="h-2.5 w-2.5 text-ok" /> Live</span>
             <span className="mt-0.5 block text-[9px] leading-tight text-ink-500">{updated.replace('Updated ', '')}</span>
           </div>
         </div>
@@ -265,6 +272,25 @@ export function LiveHero() {
             </>
           ) : (
             <p className="py-6 text-center text-sm text-ink-400">Select a bay to see its details.</p>
+          )}
+        </section>
+
+        <section className="neu shrink-0 p-4" aria-label="New bookings">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h2 className="flex items-center gap-1.5 text-[16px] font-bold">{waiting.length > 0 ? <SpinningGear teeth={8} seconds={8} className="h-4 w-4 text-coral-500" /> : <Gear teeth={8} className="h-4 w-4 text-ink-300" />} Bookings {waiting.length > 0 && <span className="ml-1 rounded-full bg-coral-500 px-2 py-0.5 text-[11px] font-semibold text-white">{waiting.length} new</span>}</h2>
+            <Link href="/admin/bookings" className="text-xs font-semibold text-coral-600">View all</Link>
+          </div>
+          {openBookings.length === 0 ? <p className="py-2 text-sm text-ink-400">No open bookings.</p> : (
+            <ul className="divide-y divide-ivory-300/60">
+              {openBookings.slice(0, 3).map((b) => (
+                <li key={b.id}>
+                  <Link href="/admin/bookings" className="flex items-center gap-2 py-2">
+                    <span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-semibold">{b.details?.customer.name ?? customerOf(db, b.customerId)?.name} · {vehicleOf(db, b.vehicleId)?.reg}</span><span className="block truncate text-xs text-ink-500">{b.date.replace(/, \d{4}$| \d{4}$/, '')}, {b.time} · {b.service}</span></span>
+                    <StatusBadge tone={BOOKING_TONE[b.status]} size="sm">{b.status}</StatusBadge>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           )}
         </section>
 

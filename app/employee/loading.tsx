@@ -1,5 +1,5 @@
-import { LoadingState } from '@/components/ui';
+import { GearLoader } from '@/components/ui/Mechanical';
 
 export default function Loading() {
-  return <LoadingState rows={6} className="mt-4" />;
+  return <GearLoader className="min-h-[60vh]" />;
 }

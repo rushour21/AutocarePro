@@ -293,8 +293,27 @@ export interface Booking {
   service: string;
   date: string;
   time: string;
-  status: 'Requested' | 'Confirmed';
+  status: BookingStatus;
   notes?: string;
+  /** full form answers; older bookings do not have them */
+  details?: BookingDetails;
+  jobId?: string;
+  declineReason?: string;
+}
+
+export type BookingStatus = 'Requested' | 'Confirmed' | 'Declined' | 'Checked In';
+export type PickupOption = 'I will drop the car' | 'Pick up from my address' | 'Pick up and drop back';
+
+export interface BookingDetails {
+  customer: { name: string; phone: string; altPhone: string; email: string; address: string; city: string; pincode: string; contactBy: string };
+  car: { reg: string; make: string; model: string; variant: string; year: number; fuel: Vehicle['fuel']; transmission: string; color: string; odometer: number; vin: string; lastService: string; insurer: string; insuranceExpiry: string };
+  reasons: VisitReason[];
+  issues: string[];
+  services: string[];
+  pickup: PickupOption;
+  pickupAddress: string;
+  /** short form: the workshop calls to fill in the rest */
+  quick?: boolean;
 }
 
 export type BayType = 'general' | 'inspection' | 'diagnostics' | 'detailing' | 'tyre' | 'quality' | 'wash';

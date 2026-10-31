@@ -4,13 +4,12 @@ import { useState } from 'react';
 import { Button, StatusBadge, Textarea } from '@/components/ui';
 import { addNote } from '@/lib/actions';
 import { VISIT_REASONS } from '@/lib/catalog';
-import { estimateOfJob, inr, itemApproval, km, PHASE_LABEL, PHASES, phaseOf, STAGE_LABEL, userOf, vehicleOf } from '@/lib/format';
+import { estimateOfJob, inr, itemApproval, km, STAGE_LABEL, userOf, vehicleOf } from '@/lib/format';
 import { useDb } from '@/lib/store';
 import type { Job } from '@/lib/types';
 import { Section } from './ClaimParts';
 
 const APPROVAL_TONE = { Approved: 'green', Declined: 'red', Pending: 'amber' } as const;
-const TASK_TONE = { Completed: 'green', 'In Progress': 'amber', Pending: 'gray' } as const;
 const NOTE = 'Note: ';
 
 const Row = ({ k, v }: { k: string; v: string }) => <div><dt className="text-xs text-ink-400">{k}</dt><dd className="text-sm font-semibold">{v}</dd></div>;
@@ -24,7 +23,6 @@ export function RepairDetails({ job, by }: { job: Job; by: string }) {
   const est = estimateOfJob(db, job.id);
   const findings = job.points.filter((p) => p.status === 'minor' || p.status === 'major');
   const notes = job.activity.filter((a) => a.text.startsWith(NOTE));
-  const history = job.activity.filter((a) => !a.text.startsWith(NOTE));
 
   return (
     <div className="space-y-5">
@@ -74,31 +72,12 @@ export function RepairDetails({ job, by }: { job: Job; by: string }) {
         </Section>
       </div>
 
-      <Section title="Work progress">
-        <div className="grid gap-4 md:grid-cols-3">
-          {(job.checkin ? PHASES : (['repair'] as const)).map((p) => {
-            const tasks = job.checkin ? job.tasks.filter((t) => phaseOf(t) === p) : job.tasks;
-            return (
-              <div key={p}>
-                {job.checkin && <p className="mb-2 text-sm font-bold">{PHASE_LABEL[p]}</p>}
-                {tasks.length === 0 ? <p className="text-sm text-ink-500">No tasks.</p> : (
-                  <ul className="space-y-2">{tasks.map((t) => <li key={t.id} className="flex items-center justify-between gap-2 text-sm"><span className="min-w-0">{t.title}</span><StatusBadge tone={TASK_TONE[t.status]} size="sm">{t.status}</StatusBadge></li>)}</ul>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </Section>
-
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div>
         <Section title={`Notes (${notes.length + (job.notes ? 1 : 0)})`}>
           {job.notes && <p className="neu-in-sm mb-3 p-3 text-sm">{job.notes}</p>}
           <ul className="mb-3 space-y-2.5">{notes.map((a) => <li key={a.id}><p className="text-sm">{a.text.slice(NOTE.length)}</p><p className="text-xs text-ink-400">{a.by} · {a.at}</p></li>)}</ul>
           <Textarea aria-label="New note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add a note about this repair…" className="!min-h-[64px]" />
           <Button size="sm" className="mt-2" disabled={!note.trim()} onClick={() => { addNote(job.id, by, note); setNote(''); }}>Add note</Button>
-        </Section>
-        <Section title="Job history">
-          <ol className="thin-scroll max-h-[320px] space-y-3 overflow-y-auto border-l-2 border-ivory-300 pl-4">{history.map((a) => <li key={a.id}><p className="text-sm">{a.text}</p><p className="text-xs text-ink-400">{a.by} · {a.at}</p></li>)}</ol>
         </Section>
       </div>
     </div>

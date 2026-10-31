@@ -32,6 +32,8 @@ export interface SceneApi {
   preset: (p: 'iso' | 'top' | 'front') => void;
 }
 export interface SceneProps {
+  /** called once the first frame is on screen */
+  onReady?: () => void;
   layout: WorkshopLayout;
   occupants?: Record<string, BayLive | undefined>;
   /** chip text + dot colour for bays with no vehicle */
@@ -255,7 +257,7 @@ export function BayView({ bay, live, selected, hovered, onSelect, onHover, liftR
 }
 
 /* ------------------------------------------------------------------ scene */
-export function WorkshopScene3D({ layout, occupants, idle, selectedId, onSelect, interactive = true, panMode, showLabels = true, focusBayId, padding, apiRef, className }: SceneProps) {
+export function WorkshopScene3D({ onReady, layout, occupants, idle, selectedId, onSelect, interactive = true, panMode, showLabels = true, focusBayId, padding, apiRef, className }: SceneProps) {
   const [hover, setHover] = useState<string | null>(null);
   const els = useRef<Record<string, HTMLElement | null>>({});
   const { plan, bays, fixtures } = layout;
@@ -288,7 +290,7 @@ export function WorkshopScene3D({ layout, occupants, idle, selectedId, onSelect,
         dpr={[1, 1.75]}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         camera={{ position: [60, 60, 60], zoom: 20, near: 0.1, far: 600 }}
-        onCreated={({ gl }) => gl.setClearColor(0x000000, 0)}
+        onCreated={({ gl }) => { gl.setClearColor(0x000000, 0); requestAnimationFrame(() => requestAnimationFrame(() => onReady?.())); }}
         onPointerMissed={() => onSelect?.(null)}
         aria-hidden
       >

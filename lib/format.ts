@@ -1,4 +1,4 @@
-import type { Claim, Estimate, EstimateItem, ItemApproval, Stage, Task, TaskPhase, Vehicle, Job, Db, Part } from './types';
+import type { BookingStatus, Claim, Estimate, EstimateItem, ItemApproval, Stage, Task, TaskPhase, Vehicle, Job, Db, Part } from './types';
 
 const IN = new Intl.NumberFormat('en-IN');
 export const inr = (n: number) => `₹${IN.format(Math.round(n))}`;
@@ -18,6 +18,8 @@ export const STAGE_LABEL: Record<Stage, string> = {
 };
 
 export type Tone = 'green' | 'amber' | 'red' | 'blue' | 'violet' | 'gray' | 'coral';
+
+export const BOOKING_TONE: Record<BookingStatus, Tone> = { Requested: 'amber', Confirmed: 'blue', 'Checked In': 'green', Declined: 'red' };
 
 /** Status chip colours (My Jobs / job details). */
 export const STAGE_TONE: Record<Stage, Tone> = {

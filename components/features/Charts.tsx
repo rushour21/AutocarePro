@@ -8,6 +8,26 @@ const nice = (max: number) => {
   return Math.ceil(max / p) * p;
 };
 
+/** Solid bars with every value printed, for small sets where the numbers are the point. The latest bar is darker. */
+export function ValueBars({ data, format, short, height = 240 }: { data: { label: string; value: number }[]; format: (n: number) => string; short: (n: number) => string; height?: number }) {
+  const max = Math.max(...data.map((d) => d.value), 1);
+  return (
+    <div>
+      <ul className="flex items-end gap-3 border-b border-ink-500/25 sm:gap-5" style={{ height }} aria-label="Values by month">
+        {data.map((d, i) => (
+          <li key={d.label} title={`${d.label}: ${format(d.value)}`} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
+            <span className="mb-1 whitespace-nowrap text-[13px] font-bold tabular-nums text-ink">{short(d.value)}</span>
+            <span className={clsx('block w-full max-w-[56px] rounded-t transition-colors', i === data.length - 1 ? 'bg-[#4f7ea8]' : 'bg-[#a9c4dc]')} style={{ height: `${(d.value / max) * 84}%`, minHeight: 4 }} />
+          </li>
+        ))}
+      </ul>
+      <div className="mt-2 flex gap-3 text-center text-xs font-medium text-ink-500 sm:gap-5">
+        {data.map((d) => <span key={d.label} className="min-w-0 flex-1">{d.label}</span>)}
+      </div>
+    </div>
+  );
+}
+
 export function BarChart({ data, format, height = 190, highlight, hideTooltip }: { data: { label: string; value: number }[]; format: (n: number) => string; height?: number; highlight?: number; hideTooltip?: boolean }) {
   const [hover, setHover] = useState<number | null>(null);
   const shown = hover ?? highlight;
